@@ -1,4 +1,4 @@
-#include <unistd.h> // for read() and write() functions
+#include <unistd.h> // for read() and write() functions.
 
 int main() {
   char string_buffer[256];
