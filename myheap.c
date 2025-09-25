@@ -9,11 +9,17 @@ static char *freep = heap;
 
 char *alloc(unsigned int size)
 {
-  return 0;     /* TO DO */
+  if (freep + size > heap + HEAP_SIZE)
+  {
+    return NULL;
+  }
+  char *p = freep;
+  freep += size;
+  return p;
 }
 
 
 void free_all()
 {
-  /* TO DO */
+  freep = heap;
 }
