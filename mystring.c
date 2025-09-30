@@ -4,13 +4,12 @@
 Function Name: mystrlen
 
 Purpose: 
-  Returns the length of a string
+  Returns the length of a string excluding the null terminator.
 
 Input:
-  s - string
-
+  s - pointer to a null-terminated string
 Output:
-  len - 
+  len - number of characters in the string
 --- */
 unsigned int mystrlen(const char *s)
 {
@@ -26,13 +25,16 @@ unsigned int mystrlen(const char *s)
 Function Name: mystrcmp
 
 Purpose:
-  Compares two strings
+  Compares two strings character by character
 
 Input:
-  s1 - string
-
+  s1 - pointer to the first string
+  s2 - pointer to the second string
 Output:
-  str_compare - returns
+  str_compare - 
+    < 0 if s1 is less than s2
+    = 0 if s1 is equal to s2
+    > 0 if s1 is greater than s2
 --- */
 int mystrcmp(const char *s1, const char *s2)
 {
@@ -54,11 +56,10 @@ Purpose:
   Copies the string from source into destination.
 
 Input:
-  dest - 
-  src - 
-
+  dest - pointer to destination buffer
+  src - pointer to source string
 Output:
-  dest - destination is returned
+  dest - pointer to the destination string
 --- */
 char *mystrcpy(char *dest, const char *src)
 {
