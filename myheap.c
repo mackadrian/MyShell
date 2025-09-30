@@ -6,7 +6,18 @@
 static char heap[HEAP_SIZE];
 static char *freep = heap;
 
+/* ---
+Function Name: alloc
 
+Purpose: 
+  Allocates a block of memory of the given size from the heap.
+
+Input:
+  size - number of bytes to allocate
+Output:
+  p - pointer to the allocated memory block
+      returns NULL if not enough space is available
+--- */
 char *alloc(unsigned int size)
 {
   if (freep + size > heap + HEAP_SIZE)
@@ -19,6 +30,17 @@ char *alloc(unsigned int size)
 }
 
 
+/* ---
+Function Name: free_all
+
+Purpose: 
+  Frees all memory previously allocated in the heap.
+
+Input:
+  none
+Output:
+  none
+--- */
 void free_all()
 {
   freep = heap;
