@@ -13,7 +13,7 @@ Output:
 --- */
 unsigned int mystrlen(const char *s)
 {
-  int length = 0;
+  int len = 0;
   while (s[len] != '\0')
     {
     len++;
