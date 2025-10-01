@@ -1,5 +1,6 @@
 # COMP3659-Linux_Shell
 Repository for COMP3659: Operating Systems Project 1.
+
 Name(s): Mack Bautista, Jarod Dacocos, Tarun Jaswal
 
 ## About
