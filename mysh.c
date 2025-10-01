@@ -1,50 +1,74 @@
 #include "mystring.h"
 #include "jobs.h"
+#include "mysh.h"
+#include "myheap.h"
+#include "stdlib.h" // to make use of exit() system call
 
-#define MAX_COMMAND_LEN 256
-#define STD_OUT 1
-#define STD_IN 0
+/* ---
+Function Name: main
 
-void clear_buffer(char *command_buffer, int bytes_read);
+Purpose: 
+  Runs the personal MYSH shell program.
+
+Input:
+arc -
+argv -
+envp -
 
 
+Output:
+--- */
 int main(int argc, char *argv[], char *envp[])
 {
   int exitShell = 0;
-  char command_buffer[MAX_COMMAND_LEN];
-  int bytes_read;
+  Command command;
 
   /* TO DO: prompt for and read command line */
-  write(STD_OUT, "$ ", 2);
-  bytes_read = read(0, command_buffer, 256);
-  command_buffer[bytes_read - 1] = '\0';
+  get_command(&command);
   
-  while (!exitShell)
-    {
+  //while (!exitShell)
+  //  {
       /* TO DO: process command line */
-      write(STD_OUT, command_buffer, MAX_COMMAND_LEN);
-      write(STD_OUT, "\n", 1);
-
-      clear_buffer(command_buffer, bytes_read);
       
       /* TO DO: prompt for and read command line */
-      write(STD_OUT, "$ ", 2);
-      bytes_read = read(0, command_buffer, MAX_COMMAND_LEN);
-      command_buffer[bytes_read - 1] = '\0';
-
       
-    }
+  //  }
   
   
   return 0;
 }
 
 
+/* ---
+Function Name: get_command
 
-void clear_buffer(char *command_buffer, int bytes_read)
+Purpose: 
+  Prompts the terminal for input.
+
+Input:
+  command -
+
+Output:
+--- */
+void get_command(Command *command)
 {
-  for (int i = 0; i < bytes_read; i++)
-    {
-      command_buffer[i] = '\0';
-    }
+  int bytes_read;
+  int command_buffer[MAX_ARGS];
+
+  write(STD_OUT, "$ ", 2);
+  bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
+  
+  if (bytes_read < 0) {
+    write(STD_ERR, "Error: cannot read\n", 19);
+    exit(1);
+  } else if (bytes_read >= MAX_ARGS) {
+    write(STD_ERR, "Error: exceeded maximum arguments\n", 35);
+    exit (1);
+  }
+
+  command_buffer[bytes_read - 1] = '\0';
+  
+
+  
+    
 }

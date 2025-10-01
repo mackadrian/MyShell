@@ -46,7 +46,7 @@ int mystrcmp(const char *s1, const char *s2)
 
   int str_compare = (unsigned char)*s1 - (unsigned char)*s2;
   
-  return str_compare
+  return str_compare;
 }
 
 /* ---

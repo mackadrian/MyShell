@@ -1,7 +1,7 @@
 mysh: mysh.o mystring.o myheap.o
 	gcc mysh.o mystring.o myheap.o -o mysh
 
-mysh.o: mysh.c mystring.h jobs.h
+mysh.o: mysh.c mystring.h jobs.h myheap.h
 	gcc -c mysh.c
 
 mystring.o: mystring.c mystring.h
