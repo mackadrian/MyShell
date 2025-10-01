@@ -11,6 +11,6 @@
 /*FUNCTION DECLARATIONS*/
 void get_command(Command *command);
 void run_command(Command *command);
-
+int tokenize(char *buffer, char *tokens[], int max_tokens);
 
 #endif
