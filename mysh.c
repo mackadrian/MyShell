@@ -2,8 +2,7 @@
 #include "jobs.h"
 #include "mysh.h"
 #include "myheap.h"
-#include "stdlib.h" // to make use of exit() system call
-
+#include <unistd.h>
 
 /* ---
 Function Name: main
@@ -15,7 +14,6 @@ Input:
 arc  - number of command-line arguments
 argv - array of command-line argument strings
 envp - array of environment variable strings
-
 
 Output: returns 0 upon successful execution
 --- */
@@ -61,16 +59,16 @@ void get_command(Command *command)
   int bytes_read;
 
   char *shell_line = "$ ";
-  
+
   write(STD_OUT, shell_line, mystrlen(shell_line));
   bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
   
   if (bytes_read < 0) {
     write(STD_ERR, "Error: cannot read\n", 19);
-  } else if (bytes_read >= MAX_ARGS) {
+} else if (bytes_read >= MAX_ARGS) {
     write(STD_ERR, "Error: exceeded maximum arguments\n", 35);
-  }
-  
+}
+
   command_buffer[bytes_read - 1] = '\0';
   num_tokens = tokenize(command_buffer, tokens, MAX_ARGS);
 
@@ -109,17 +107,20 @@ int tokenize(char *buffer, char *tokens[], int max_tokens)
   while(buffer[i] != '\0' && token_count < max_tokens) {
     
     // ignore whitespaces
-    while (buffer[i] == ' ' || buffer[i] == '\t') i++;
+    while (buffer[i] == ' ' || buffer[i] == '\t') {
+      i++;
+    }
+    
     if (buffer[i] == '\0') break;
-
+    
     tokens[token_count++] = &buffer[i];
     
     // find end of token
-    while (buffer[i] != ' ' && buffer[i] != '\t' && buffer[i] != '\0') i++;
-
+    while (buffer[i] != ' ' && buffer[i] != '\t' && buffer[i] != '\0') {
+      i++;
     }
-
-  return token_count;
-
+  }
+    
+  return token_count; 
 }
 

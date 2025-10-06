@@ -84,7 +84,8 @@ Input:
 Output:
   dest - pointer to the destination buffer containing the concatenated string
 --- */
-char* mystrcat(char *dest, const char *src) {
+char *mystrcat(char *dest, const char *src)
+{
     char *ptr = dest;
 
     while (*ptr != '\0') 
