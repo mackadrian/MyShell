@@ -119,8 +119,14 @@ int tokenize(char *buffer, char *tokens[], int max_tokens)
     while (buffer[i] != ' ' && buffer[i] != '\t' && buffer[i] != '\0') {
       i++;
     }
+
+     // null-terminate token if not end of string
+    if (buffer[i] != '\0') {
+      buffer[i] = '\0';
+      i++;
+    }
   }
-    
+  
   return token_count; 
 }
 
