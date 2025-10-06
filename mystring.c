@@ -71,3 +71,35 @@ char *mystrcpy(char *dest, const char *src)
   *ptr = '\0';
   return dest;
 }
+
+/* ---
+Function Name: mystrcat
+
+Purpose: 
+  Appends the source string 'src' to the end of the destination 'dest'.
+
+Input:
+  dest - pointer to destination buffer
+  src - pointer to source string
+Output:
+  dest - pointer to the destination buffer containing the concatenated string
+--- */
+char* mystrcat(char *dest, const char *src) {
+    char *ptr = dest;
+
+    while (*ptr != '\0') 
+    {
+        ptr++;
+    }
+
+    while (*src != '\0') 
+    {
+        *ptr = *src;
+        ptr++;
+        src++;
+    }
+
+    *ptr = '\0';
+
+    return dest;
+}
