@@ -1,5 +1,5 @@
 testsh: testsh.o mystring.o myheap.o
-	gcc testsh.o mystring.o myheap.o -o mysh
+	gcc testsh.o mystring.o myheap.o -o testsh
 
 testsh.o: testsh.c mysh.h mystring.h jobs.h myheap.h
 	gcc -c testsh.c

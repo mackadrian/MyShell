@@ -3,6 +3,7 @@
 #include "mysh.h"
 #include "myheap.h"
 #include <unistd.h>
+#include <stdio.h> // for testing
 
 /* ---
 Function Name: main
@@ -22,11 +23,26 @@ int main(int argc, char *argv[], char *envp[])
   int exitShell = 0;
   Command command;
 
+
+
+  printf("Running get_command()... \n");
   get_command(&command);
 
+  printf("Print out appended Command structure... \n");
+  printf("Press ENTER to continue... \n");
+  getchar();
+
+
+  printf("command->argc = %d arguments\n", command.argc);
+  for(int i = 0; i < command.argc; i++) {
+    printf("command->argv[%d] = %s\n", i, command.argv[i]); 
+  }
+
+
+  
   while (!exitShell && mystrcmp(command.argv[0], "exit"))
     {
-      run_command(&command);
+     
     
     }
   
@@ -93,7 +109,7 @@ Input:
 
 Output:
   
---- */
+---
 int run_command(Command *command) {
   int pid = fork();
 
@@ -117,7 +133,7 @@ int run_command(Command *command) {
         return -1;
       }
   }
-}
+  } */
 
 /* ---
 Function Name: tokenize
