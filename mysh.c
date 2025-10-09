@@ -144,52 +144,7 @@ Output:
 
 void get_job(Job *job)
 {
-    job->num_stages = 0;
-    job->background = 0;
-    job->infile_path = NULL;
-    job->outfile_path = NULL;
-
-    char *command_buffer = alloc(1024);
-    write(STD_OUT, "$ ", 2);
-    int bytes_read = read(STD_IN, command_buffer, 1024);
-    if (bytes_read <= 0) return;
-    command_buffer[bytes_read - 1] = '\0';
-
-    // Background detection
-    int len = mystrlen(command_buffer);
-    if (command_buffer[len - 1] == '&') {
-        job->background = 1;
-        command_buffer[len - 1] = '\0';
-    }
-
-    // Split by pipes
-    char *stage_str = strtok(command_buffer, "|");
-    while (stage_str != NULL && job->num_stages < MAX_PIPELINE_LEN) {
-        Command *cmd = &job->pipeline[job->num_stages];
-        cmd->argc = 0;
-
-        // Tokenize stage
-        char *token = strtok(stage_str, " ");
-        while (token != NULL && cmd->argc < MAX_ARGS) {
-            // Output redirection on last stage
-            if (job->num_stages == 0 && mystrcmp(token, "<") == 0) {
-                token = strtok(NULL, " ");
-                job->infile_path = token;
-            } else if (job->num_stages > 0 && mystrcmp(token, ">") == 0) {
-                token = strtok(NULL, " ");
-                job->outfile_path = token;
-            } else {
-                cmd->argv[cmd->argc++] = token;
-            }
-            token = strtok(NULL, " ");
-        }
-        cmd->argv[cmd->argc] = NULL;
-
-        job->num_stages++;
-        stage_str = strtok(NULL, "|");
-    }
-
-    free_all();
+  // TO DO
 }
 
 
@@ -208,62 +163,7 @@ Output:
 
 void run_job(Job *job)
 {
-    int num_stages = job->num_stages;
-    int pipefd[MAX_PIPELINE_LEN-1][2];  // pipes between stages
-
-    // Create pipes
-    for (int i = 0; i < num_stages - 1; i++)
-        if (pipe(pipefd[i]) < 0) perror("pipe");
-
-    for (int i = 0; i < num_stages; i++) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            // First stage: input redirection
-            if (i == 0 && job->infile_path) {
-                int fd = open(job->infile_path, O_RDONLY);
-                dup2(fd, STDIN_FILENO);
-                close(fd);
-            }
-
-            // Last stage: output redirection
-            if (i == num_stages-1 && job->outfile_path) {
-                int fd = open(job->outfile_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                dup2(fd, STDOUT_FILENO);
-                close(fd);
-            }
-
-            // Connect pipes
-            if (i > 0) {
-                dup2(pipefd[i-1][0], STDIN_FILENO); // stdin from previous pipe
-            }
-            if (i < num_stages-1) {
-                dup2(pipefd[i][1], STDOUT_FILENO);  // stdout to next pipe
-            }
-
-            // Close all pipes in child
-            for (int j = 0; j < num_stages-1; j++) {
-                close(pipefd[j][0]);
-                close(pipefd[j][1]);
-            }
-
-            char fullpath[256];
-            mystrcpy(fullpath, "/usr/bin/");
-            mystrcat(fullpath, job->pipeline[i].argv[0]);
-            execve(fullpath, job->pipeline[i].argv, NULL);
-            _exit(1);
-        }
-    }
-
-    // Parent closes all pipes
-    for (int i = 0; i < num_stages-1; i++) {
-        close(pipefd[i][0]);
-        close(pipefd[i][1]);
-    }
-
-    // Wait for children if foreground
-    if (!job->background) {
-        for (int i = 0; i < num_stages; i++) wait(NULL);
-    }
+  // TO DO
 }
 
 
