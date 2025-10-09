@@ -100,17 +100,25 @@ int run_command(Command *command) {
   int pid = fork();
 
   if (pid == -1) {
-    // fork failed
+    // fork failed                                                                                        
     return -1;
   } else if (pid == 0) {
-    // child process
-    execve(command->argv[0], command->argv, NULL);
+    // child process                                                                                      
+    char fullpath[256];
+    mystrcpy(fullpath, "/usr/bin/");
+    mystrcat(fullpath, command->argv[0]);
+
+    execve(fullpath, command->argv, NULL);
     _exit(1);
+    
+    // old                                                                                                
+    //execve(command->argv[0], command->argv, NULL);                                                      
+    //_exit(1);                                                                                           
   } else {
-    // parent process
+    // parent process                                                                                     
     int status;
     if (waitpid(pid, &status, 0) < 0) {
-        return -1; // waitpid failed
+        return -1; // waitpid failed                                                                      
       }
 
       if (WIFEXITED(status)) {
