@@ -163,7 +163,124 @@ Output:
 
 void run_job(Job *job)
 {
-  // TO DO
+  #include "mystring.h"
+#include "jobs.h"
+#include "myheap.h"
+#include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
+#include <sys/wait.h>  // waitpid
+
+/* --- manual stage tokenizer --- */
+void parse_stage(Command *cmd, char *stage_str)
+{
+    cmd->argc = 0;
+    int i = 0, start = 0;
+    while (stage_str[i] != '\0') {
+        // skip spaces
+        while (stage_str[i] == ' ' || stage_str[i] == '\t') i++;
+        if (stage_str[i] == '\0') break;
+
+        start = i;
+        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0') i++;
+
+        stage_str[i] = '\0'; // terminate token
+        cmd->argv[cmd->argc++] = &stage_str[start];
+        i++;
+    }
+    cmd->argv[cmd->argc] = NULL;
+}
+
+/* --- get_job without standard library --- */
+void get_job(Job *job)
+{
+    job->num_stages = 0;
+    job->background = 0;
+    job->infile_path = NULL;
+    job->outfile_path = NULL;
+
+    char *command_buffer = alloc(1024);
+    write(STD_OUT, "$ ", 2);
+    int bytes_read = read(STD_IN, command_buffer, 1024);
+    if (bytes_read <= 0) return;
+    command_buffer[bytes_read - 1] = '\0';
+
+    // check background
+    int len = mystrlen(command_buffer);
+    if (command_buffer[len-1] == '&') {
+        job->background = 1;
+        command_buffer[len-1] = '\0';
+    }
+
+    // manual split by pipe '|'
+    int i = 0, stage_start = 0;
+    while (1) {
+        if (command_buffer[i] == '|' || command_buffer[i] == '\0') {
+            command_buffer[i] = '\0';
+            parse_stage(&job->pipeline[job->num_stages], &command_buffer[stage_start]);
+            job->num_stages++;
+            if (command_buffer[i] == '\0') break;
+            stage_start = i + 1;
+        }
+        i++;
+    }
+
+    free_all();
+}
+
+/* --- run_job without standard library --- */
+void run_job(Job *job)
+{
+    int num_stages = job->num_stages;
+    int pipefd[MAX_PIPELINE_LEN-1][2];
+
+    for (int i=0; i<num_stages-1; i++)
+        if (pipe(pipefd[i]) < 0) write(STD_ERR, "pipe failed\n", 12);
+
+    for (int i=0; i<num_stages; i++) {
+        int pid = fork();
+        if (pid == 0) {
+            // input redirection
+            if (i == 0 && job->infile_path) {
+                int fd = open(job->infile_path, 0); // 0 = read-only
+                dup2(fd, STDIN_FILENO);
+                close(fd);
+            }
+
+            // output redirection
+            if (i == num_stages-1 && job->outfile_path) {
+                int fd = creat(job->outfile_path, 0644); // create file
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+            }
+
+            // connect pipes
+            if (i > 0) dup2(pipefd[i-1][0], STDIN_FILENO);
+            if (i < num_stages-1) dup2(pipefd[i][1], STDOUT_FILENO);
+
+            // close all pipes
+            for (int j=0; j<num_stages-1; j++) {
+                close(pipefd[j][0]);
+                close(pipefd[j][1]);
+            }
+
+            char fullpath[256];
+            mystrcpy(fullpath, "/usr/bin/");
+            mystrcat(fullpath, job->pipeline[i].argv[0]);
+            execve(fullpath, job->pipeline[i].argv, NULL);
+            _exit(1);
+        }
+    }
+
+    // close pipes in parent
+    for (int i=0; i<num_stages-1; i++) {
+        close(pipefd[i][0]);
+        close(pipefd[i][1]);
+    }
+
+    // wait for children if foreground
+    if (!job->background)
+        for (int i=0; i<num_stages; i++) wait(NULL);
+}
+
 }
 
 
