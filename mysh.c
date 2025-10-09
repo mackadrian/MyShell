@@ -3,6 +3,7 @@
 #include "mysh.h"
 #include "myheap.h"
 #include <unistd.h>
+#include <fcntl.h>
 
 /* ---
 Function Name: main
