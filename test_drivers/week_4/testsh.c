@@ -28,8 +28,10 @@ int main(int argc, char *argv[], char *envp[])
   printf("Running get_command()... \n");
   get_command(&command);
 
+
+  printf("\n");
   printf("Print out appended Command structure... \n");
-  printf("Press ENTER to continue... \n");
+  printf("Press ANY KEY to continue... \n");
   getchar();
 
 
@@ -42,8 +44,14 @@ int main(int argc, char *argv[], char *envp[])
   
   while (!exitShell && mystrcmp(command.argv[0], "exit"))
     {
-     
-    
+
+      printf("Running command...\n");
+      printf("Press ANY KEY to continue...\n");
+      getchar();
+
+      run_command(&command);
+      get_command(&command);
+      
     }
   
   
@@ -98,6 +106,25 @@ void get_command(Command *command)
   free_all();
 }
 
+
+/* ---
+Function Name: run_command
+
+Purpose: 
+  Executes a given command by creating a new process using fork().
+  The child process attempts to run the command using execve() with
+  a constructed path ("/usr/bin/" + command name). The parent process
+  waits for the child to complete and returns its exit status.
+
+Input:
+  command - pointer to a Command structure containing the command name
+            and its argument vector (argv).
+
+Output:
+  Returns the exit status of the executed command if successful.
+  Returns -1 if fork() or waitpid() fails, or if the command
+  does not terminate normally.
+--- */
 /* ---
 Function Name: run_command
 
@@ -109,22 +136,30 @@ Input:
 
 Output:
   
----
+--- */
 int run_command(Command *command) {
   int pid = fork();
 
   if (pid == -1) {
-    // fork failed
+    // fork failed                                                                                        
     return -1;
   } else if (pid == 0) {
-    // child process
-    execve(command->argv[0], command->argv, NULL);
+    // child process                                                                                      
+    char fullpath[256];
+    mystrcpy(fullpath, "/usr/bin/");
+    mystrcat(fullpath, command->argv[0]);
+
+    execve(fullpath, command->argv, NULL);
     _exit(1);
+    
+                                                                                                    
+    execve(command->argv[0], command->argv, NULL);                                                      
+    _exit(1);                                                                                           
   } else {
-    // parent process
+    // parent process                                                                                     
     int status;
     if (waitpid(pid, &status, 0) < 0) {
-        return -1; // waitpid failed
+        return -1; // waitpid failed                                                                      
       }
 
       if (WIFEXITED(status)) {
@@ -133,7 +168,8 @@ int run_command(Command *command) {
         return -1;
       }
   }
-  } */
+}
+
 
 /* ---
 Function Name: tokenize

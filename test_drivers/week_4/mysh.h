@@ -2,6 +2,8 @@
 #define MY_SH_H
 
 #include "jobs.h"
+#include <unistd.h>     // for fork(), execve(), _exit()
+#include <sys/wait.h>   // for waitpid(), WIFEXITED, etc.#include <unistd.h>
 
 /*CONSTANTS*/
 #define STD_IN 0
