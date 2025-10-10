@@ -11,19 +11,39 @@ Function Name: main
 Purpose: 
  Tests the personal MYSH shell program.
 
+ **The testing of this MYSH shell program is ONLY applicable to
+ Project 1: Week 4 Design and Implementation Guidance!
+
 Input:
 arc  - number of command-line arguments
 argv - array of command-line argument strings
 envp - array of environment variable strings
 
 Output: returns 0 upon successful execution
+--- *//* ---
+Function Name: main
+
+Purpose: 
+  Serves as the entry point for testing the MYSH shell program.
+  It initializes a Command structure, prompts the user for input
+  commands using get_command(), and executes them through run_command().
+  The loop continues until the user enters "exit".
+  The function also displays debugging information about parsed commands.
+
+Input:
+  argc - number of command-line arguments passed to the program
+  argv - array of command-line argument strings
+  envp - array of environment variable strings
+
+Output:
+  Returns 0 upon successful execution after the user exits the shell.
 --- */
 int main(int argc, char *argv[], char *envp[])
 {
   int exitShell = 0;
   Command command;
 
-
+  printf("NOTE: comment out the '/usr/bin/' path if you're running commands outside of /usr/bin/!!\n");
 
   printf("Running get_command()... \n");
   get_command(&command);
@@ -125,18 +145,6 @@ Output:
   Returns -1 if fork() or waitpid() fails, or if the command
   does not terminate normally.
 --- */
-/* ---
-Function Name: run_command
-
-Purpose: 
-  
-
-Input:
-  
-
-Output:
-  
---- */
 int run_command(Command *command) {
   int pid = fork();
 
@@ -146,7 +154,7 @@ int run_command(Command *command) {
   } else if (pid == 0) {
     // child process                                                                                      
     char fullpath[256];
-    mystrcpy(fullpath, "/usr/bin/");
+    mystrcpy(fullpath, "/usr/bin/"); // comment this out to run commands outside of this path
     mystrcat(fullpath, command->argv[0]);
 
     execve(fullpath, command->argv, NULL);
@@ -190,30 +198,23 @@ int tokenize(char *buffer, char *tokens[], int max_tokens)
 {
   int token_count = 0;
   int i = 0;
+  int in_token = 0;
 
-  while(buffer[i] != '\0' && token_count < max_tokens) {
-    
-    // ignore whitespaces
-    while (buffer[i] == ' ' || buffer[i] == '\t') {
-      i++;
+  while (buffer[i] != '\0' && token_count < max_tokens) {
+
+    if (buffer[i] == ' ' || buffer[i] == '\t') {
+      buffer[i] = '\0'; 
+      in_token = 0;
     }
-    
-    if (buffer[i] == '\0') break;
-    
-    tokens[token_count++] = &buffer[i];
-    
-    // find end of token
-    while (buffer[i] != ' ' && buffer[i] != '\t' && buffer[i] != '\0') {
-      i++;
+    else if (!in_token) {
+      tokens[token_count++] = &buffer[i];
+      in_token = 1;
     }
 
-     // null-terminate token if not end of string
-    if (buffer[i] != '\0') {
-      buffer[i] = '\0';
-      i++;
-    }
+    i++;
   }
-  
-  return token_count; 
+
+  return token_count;
 }
+
 
