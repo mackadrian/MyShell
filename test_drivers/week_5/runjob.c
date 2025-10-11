@@ -9,13 +9,21 @@
 Function Name: run_job
 
 Purpose: 
-  
+  Executes a parsed Job structure by creating child processes for each 
+  stage in the pipeline. It handles inter-stage piping, input/output 
+  redirection, and background execution. Each child process replaces 
+  its image with the specified command using execve(). The parent process 
+  waits for all child processes to complete if the job is running in 
+  the foreground.
 
 Input:
-  
+  job - pointer to a Job structure containing the pipeline of commands, 
+        number of stages, input/output file paths, and background flag.
 
 Output:
-  
+  Executes the commands specified in the Job structure. For foreground 
+  jobs, the function waits for all stages to complete. For background 
+  jobs, it returns immediately after spawning the child processes.
 --- */
 void run_job(Job *job)
 {
