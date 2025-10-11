@@ -4,6 +4,9 @@
 #include "myheap.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include "runjob.h"
+#include "getjob.h"
+
 
 /* ---
 Function Name: main

@@ -8,13 +8,21 @@
 Function Name: get_job
 
 Purpose: 
-  
+  Reads an entire job command line from user input, parses it into one 
+  or more pipeline stages, and stores the results in the provided Job 
+  structure. The function identifies background execution requests 
+  (via '&') and splits the command line by pipes ('|') to create 
+  multiple Command stages for pipelined execution. Each stage is 
+  tokenized separately using parse_stage().
 
 Input:
-  
+  job - pointer to a Job structure that will store the parsed command
+        pipeline, background flag, input/output paths, and stage count.
 
 Output:
-  
+  Populates the Job structure with parsed command stages, background 
+  execution flag, and resets file redirection paths. The number of 
+  stages is stored in job->num_stages.
 --- */
 void get_job(Job *job)
 {
@@ -54,7 +62,26 @@ void get_job(Job *job)
     free_all();
 }
 
-/* --- manual stage tokenizer --- */
+/* ---
+Function Name: parse_stage
+
+Purpose: 
+  Tokenizes a single stage of a pipeline command string into individual 
+  arguments and stores them in the provided Command structure. It splits 
+  the stage string based on whitespace and appends each token to the 
+  argument vector (argv) of the Command. The argument count (argc) is 
+  updated accordingly.
+
+Input:
+  cmd       - pointer to a Command structure to store the parsed arguments.
+  stage_str - pointer to a null-terminated string representing one stage 
+              of a pipeline (a single command and its arguments).
+
+Output:
+  Populates the Command structure with parsed arguments and sets the 
+  argument count (argc). The argv array is null-terminated.
+--- */
+
 void parse_stage(Command *cmd, char *stage_str)
 {
     cmd->argc = 0;
