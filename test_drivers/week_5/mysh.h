@@ -11,4 +11,6 @@
 #define STD_OUT 1
 #define STD_ERR 2
 
+void print_job(Job *job);
+
 #endif
