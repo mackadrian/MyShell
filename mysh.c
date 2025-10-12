@@ -143,12 +143,6 @@ Output:
   
 --- */
 
-void get_job(Job *job)
-{
-  // TO DO
-}
-
-
 /* ---
 Function Name: run_job
 
@@ -161,14 +155,6 @@ Input:
 Output:
   
 --- */
-
-void run_job(Job *job)
-{
-  #include "mystring.h"
-#include "jobs.h"
-#include "myheap.h"
-#include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
-#include <sys/wait.h>  // waitpid
 
 /* --- manual stage tokenizer --- */
 void parse_stage(Command *cmd, char *stage_str)
@@ -190,7 +176,6 @@ void parse_stage(Command *cmd, char *stage_str)
     cmd->argv[cmd->argc] = NULL;
 }
 
-/* --- get_job without standard library --- */
 void get_job(Job *job)
 {
     job->num_stages = 0;
@@ -227,7 +212,6 @@ void get_job(Job *job)
     free_all();
 }
 
-/* --- run_job without standard library --- */
 void run_job(Job *job)
 {
     int num_stages = job->num_stages;
@@ -280,8 +264,6 @@ void run_job(Job *job)
     // wait for children if foreground
     if (!job->background)
         for (int i=0; i<num_stages; i++) wait(NULL);
-}
-
 }
 
 

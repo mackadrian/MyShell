@@ -14,7 +14,7 @@
 void get_command(Command *command);
 int run_command(Command *command);
 
-void get_job(char *line, Job *job);
+void get_job(Job *job);
 void run_job(Job *job);
 
 int tokenize(char *buffer, char *tokens[], int max_tokens);
