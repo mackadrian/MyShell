@@ -2,11 +2,13 @@
 #include "jobs.h"
 #include "mysh.h"
 #include "myheap.h"
-#include <unistd.h>
-#include <fcntl.h>
 #include "runjob.h"
 #include "getjob.h"
 
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <stdio.h> // for testing
 
 /* ---
 Function Name: main
@@ -43,6 +45,7 @@ int main(int argc, char *argv[], char *envp[])
   while (!exitShell && mystrcmp(job.pipeline[0].argv[0], "exit"))
     {
       run_job(&job);
+      free_all();
       get_job(&job);
 
       
@@ -74,18 +77,19 @@ Output:
   Prints the Job's number of stages, infile/outfile paths, background flag, 
   and the arguments of each Command in the pipeline to standard output.
 --- */
-void print_job(Job *job) {
-    printf("Job info:\n");
-    printf("Number of stages: %u\n", job->num_stages);
-    printf("Input file: %s\n", job->infile_path ? job->infile_path : "None");
-    printf("Output file: %s\n", job->outfile_path ? job->outfile_path : "None");
-    printf("Background: %s\n", job->background ? "Yes" : "No");
+void print_job(Job *job)
+{
+    printf("# of stages: %u\n", job->num_stages);
+    printf("Input file: %s\n", job->infile_path ? job->infile_path : "none");
+    printf("Output file: %s\n", job->outfile_path ? job->outfile_path : "none");
+    printf("Background: %s\n", job->background ? "yes" : "no");
 
     for (unsigned int i = 0; i < job->num_stages; i++) {
         Command *cmd = &job->pipeline[i];
-        printf("Stage %u: argc = %u\n", i, cmd->argc);
+        printf("Stage %u:", i);
         for (unsigned int j = 0; j < cmd->argc; j++) {
-            printf("  argv[%u] = %s\n", j, cmd->argv[j]);
+            printf(" \"%s\"", cmd->argv[j]);
         }
+        printf("\n");
     }
 }

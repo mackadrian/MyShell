@@ -1,0 +1,10 @@
+#include "errors.h"
+#include "mystring.h"
+#include <unistd.h>
+
+void print_error(int code) {
+    if (code > 0 && code < (int)(sizeof(error_messages) / sizeof(error_messages[0])) 
+        && error_messages[code]) {
+        write(STD_ERR, error_messages[code], mystrlen(error_messages[code]));
+    }
+}

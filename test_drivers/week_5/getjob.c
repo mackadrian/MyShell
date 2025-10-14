@@ -1,6 +1,8 @@
 #include "getjob.h"
 #include "mystring.h"
 #include "myheap.h"
+#include "errors.h"
+
 #include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
 #include <sys/wait.h>  // waitpid
 
@@ -31,36 +33,58 @@ void get_job(Job *job)
     job->infile_path = NULL;
     job->outfile_path = NULL;
 
-    char *command_buffer = alloc(1024);
-    
+    char *command_buffer = alloc(MAX_ARGS);
     write(STD_OUT, SHELL, mystrlen(SHELL));
-    
-    int bytes_read = read(STD_IN, command_buffer, 1024);
-    if (bytes_read <= 0) return;
+
+    int bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
+    if (bytes_read < 0){
+      print_error(ERR_EXEC_FAIL);
+        return;
+    }
+
     command_buffer[bytes_read - 1] = '\0';
 
-    // check background
-    int len = mystrlen(command_buffer);
-    if (command_buffer[len-1] == '&') {
-        job->background = 1;
-        command_buffer[len-1] = '\0';
+    /* check for empty input */
+    if (command_buffer[0] == '\0') {
+      free_all();
+      return;
     }
 
-    // manual split by pipe '|'
-    int i = 0, stage_start = 0;
-    while (1) {
-        if (command_buffer[i] == '|' || command_buffer[i] == '\0') {
+    /* check background (&) */
+    int len = mystrlen(command_buffer);
+    if (len > 0 && command_buffer[len - 1] == '&') {
+        job->background = 1;
+        command_buffer[len - 1] = '\0';
+    }
+
+    int stage_start = 0;
+
+    for (int i = 0;; i++) {
+        char c = command_buffer[i];
+
+        /* found pipe or end of string */
+        if (c == '|' || c == '\0') {
             command_buffer[i] = '\0';
-            parse_stage(&job->pipeline[job->num_stages], &command_buffer[stage_start]);
-            job->num_stages++;
-            if (command_buffer[i] == '\0') break;
+
+            /* skip leading whitespace in this stage */
+            while (command_buffer[stage_start] == ' ' || command_buffer[stage_start] == '\t')
+                stage_start++;
+
+            /* only parse if this stage isn’t empty */
+            if (command_buffer[stage_start] != '\0') {
+                parse_stage(&job->pipeline[job->num_stages], &command_buffer[stage_start]);
+                job->num_stages++;
+            }
+
+            if (c == '\0')
+                break;
+
             stage_start = i + 1;
         }
-        i++;
-    }
-
-    free_all();
+    }   
 }
+
+
 
 /* ---
 Function Name: parse_stage
@@ -81,22 +105,29 @@ Output:
   Populates the Command structure with parsed arguments and sets the 
   argument count (argc). The argv array is null-terminated.
 --- */
-
 void parse_stage(Command *cmd, char *stage_str)
 {
     cmd->argc = 0;
-    int i = 0, start = 0;
+    int i = 0;
+
     while (stage_str[i] != '\0') {
-        // skip spaces
-        while (stage_str[i] == ' ' || stage_str[i] == '\t') i++;
-        if (stage_str[i] == '\0') break;
+        /* skip whitespace */
+        while (stage_str[i] == ' ' || stage_str[i] == '\t')
+            i++;
 
-        start = i;
-        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0') i++;
+        if (stage_str[i] == '\0')
+            break;
 
-        stage_str[i] = '\0'; // terminate token
+        int start = i;
+
+        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
+            i++;
+
+        if (stage_str[i] != '\0')
+            stage_str[i++] = '\0';
+
         cmd->argv[cmd->argc++] = &stage_str[start];
-        i++;
     }
+
     cmd->argv[cmd->argc] = NULL;
 }
