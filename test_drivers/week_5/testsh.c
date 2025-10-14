@@ -28,38 +28,47 @@ Output: returns 0 upon successful execution
 --- */
 int main(int argc, char *argv[], char *envp[])
 {
-  int exitShell = 0;
-  Job job;
+    int exitShell = 0;
+    Job job;
 
-  printf("Running get_job()... \n");
-  get_job(&job);
+    printf("Running get_job()... \n");
+    get_job(&job);
 
-  printf("\n");
-  printf("Print out appended Job structure... \n");
-  printf("Press ANY KEY to continue... \n");
-  getchar();
+    while (!exitShell) {
+        /* skip empty input */
+        if (job.num_stages == 0) {
+            /* just prompt again */
+            get_job(&job);
+            continue;
+        }
 
-  print_job(&job);
-  printf("\n");
-  
-  while (!exitShell && mystrcmp(job.pipeline[0].argv[0], "exit"))
-    {
-      run_job(&job);
-      free_all();
-      get_job(&job);
+        printf("\nPrint out appended Job structure... \n");
+        printf("Press ANY KEY to continue... \n");
+        getchar();
+        print_job(&job);
+        printf("\n");
 
-      
-      printf("\n");
-      printf("Printing out appended Job structure inside SHELL LOOP...\n");
-      printf("Press ANY KEY to continue...\n");
-      getchar();
-      print_job(&job);
-      printf("\n");
+        /* check if user typed 'exit' */
+        if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0)
+            break;
+
+        run_job(&job);
+        free_all();
+
+        printf("\n");
+        printf("Printing out appended Job structure inside SHELL LOOP...\n");
+        printf("Press ANY KEY to continue...\n");
+        getchar();
+        print_job(&job);
+        printf("\n");
+
+        /* get next command */
+        get_job(&job);
     }
-  
-  
-  return 0;
+
+    return 0;
 }
+
 
 /* ---
 Function Name: print_job

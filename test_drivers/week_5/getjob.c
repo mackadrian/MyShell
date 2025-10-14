@@ -28,41 +28,61 @@ Output:
 --- */
 void get_job(Job *job)
 {
+    /* reset job structure */
     job->num_stages = 0;
     job->background = 0;
     job->infile_path = NULL;
     job->outfile_path = NULL;
 
     char *command_buffer = alloc(MAX_ARGS);
-    write(STD_OUT, SHELL, mystrlen(SHELL));
-
-    int bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
-    if (bytes_read < 0){
-      print_error(ERR_EXEC_FAIL);
+    if (!command_buffer) {
+        print_error(ERR_EXEC_FAIL);
         return;
     }
 
-    command_buffer[bytes_read - 1] = '\0';
+    write(STD_OUT, SHELL, mystrlen(SHELL));
 
-    /* check for empty input */
-    if (command_buffer[0] == '\0') {
-      free_all();
-      return;
+    int bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
+    if (bytes_read < 0) {
+        print_error(ERR_EXEC_FAIL);
+        return;
+    }
+    if (bytes_read == 0) {
+        /* EOF pressed, treat as empty input */
+        free_all();
+        return;
     }
 
-    /* check background (&) */
+    /* remove trailing newline if present */
+    if (command_buffer[bytes_read - 1] == '\n') {
+        command_buffer[bytes_read - 1] = '\0';
+    } else {
+        command_buffer[bytes_read] = '\0'; /* ensure null termination */
+    }
+
+    /* skip leading whitespace */
+    int start = 0;
+    while (command_buffer[start] == ' ' || command_buffer[start] == '\t')
+        start++;
+
+    if (command_buffer[start] == '\0') {
+        /* empty input */
+        free_all();
+        return;
+    }
+
+    /* check for background execution (&) */
     int len = mystrlen(command_buffer);
     if (len > 0 && command_buffer[len - 1] == '&') {
         job->background = 1;
         command_buffer[len - 1] = '\0';
     }
 
-    int stage_start = 0;
-
-    for (int i = 0;; i++) {
+    /* parse pipeline stages separated by '|' */
+    int stage_start = start;
+    for (int i = start;; i++) {
         char c = command_buffer[i];
 
-        /* found pipe or end of string */
         if (c == '|' || c == '\0') {
             command_buffer[i] = '\0';
 
@@ -70,7 +90,6 @@ void get_job(Job *job)
             while (command_buffer[stage_start] == ' ' || command_buffer[stage_start] == '\t')
                 stage_start++;
 
-            /* only parse if this stage isn’t empty */
             if (command_buffer[stage_start] != '\0') {
                 parse_stage(&job->pipeline[job->num_stages], &command_buffer[stage_start]);
                 job->num_stages++;
@@ -81,8 +100,12 @@ void get_job(Job *job)
 
             stage_start = i + 1;
         }
-    }   
+    }
+
+    /* NOTE: do NOT call free_all() here — call it after run_job() in your shell loop */
 }
+
+
 
 
 
