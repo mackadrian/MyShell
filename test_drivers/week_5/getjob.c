@@ -63,11 +63,21 @@ void get_job(Job *job)
         return;
     }
 
-    /* check for background execution (&) */
+    /* --- FIX: trim trailing whitespace before checking for '&' --- */
     int len = mystrlen(command_buffer);
+    while (len > 0 && (command_buffer[len - 1] == ' ' || command_buffer[len - 1] == '\t')) {
+        command_buffer[--len] = '\0';
+    }
+
+    /* check for background execution (&) */
     if (len > 0 && command_buffer[len - 1] == '&') {
         job->background = 1;
-        command_buffer[len - 1] = '\0';
+        command_buffer[--len] = '\0';
+
+        /* trim any whitespace before the '&' */
+        while (len > 0 && (command_buffer[len - 1] == ' ' || command_buffer[len - 1] == '\t')) {
+            command_buffer[--len] = '\0';
+        }
     }
 
     /* parse pipeline stages separated by '|' */
@@ -96,7 +106,6 @@ void get_job(Job *job)
 
     /* NOTE: do NOT call free_all() here — call it after run_job() in your shell loop */
 }
-
 
 /* ---
 Function Name: parse_stage

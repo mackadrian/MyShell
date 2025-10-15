@@ -15,7 +15,7 @@ enum ErrorCode {
 };
 
 
-/* Error message table */
+// ERROR MESSAGE TABLE
 static const char *error_messages[NUM_ERRORS] = {
     [ERR_CMD_NOT_FOUND]  = "Error: command not found\n",
     [ERR_PIPE_FAIL]      = "Error: pipe creation failed\n",
@@ -26,7 +26,7 @@ static const char *error_messages[NUM_ERRORS] = {
 };
 
 
-/* Function prototype */
+// FUNCTION PROTOTYPES
 void print_error(enum ErrorCode code);
 
 #endif

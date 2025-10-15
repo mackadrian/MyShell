@@ -10,81 +10,74 @@
 
 #include <stdio.h> // for testing
 
-/* ---
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "mystring.h"
+#include "jobs.h"
+#include "myheap.h"
+#include "getjob.h"
+#include "runjob.h"    /* optional, if you want to simulate running jobs */
+
+/* Forward declarations */
+void print_job(Job *job);
+
+/* --- 
 Function Name: main
-
-Purpose: 
- Tests the personal MYSH shell program.
-
- **The testing of this MYSH shell program is ONLY applicable to
- Project 1: Week 5 Design and Implementation Guidance!
-
-Input:
-arc  - number of command-line arguments
-argv - array of command-line argument strings
-envp - array of environment variable strings
-
-Output: returns 0 upon successful execution
+Purpose:
+  Drives tests for get_job() and parse_stage() by simulating
+  how the MYSH shell parses commands and constructs Job structs.
 --- */
 int main(int argc, char *argv[], char *envp[])
 {
-    int exitShell = 0;
     Job job;
+    int exitShell = 0;
 
-    printf("Running get_job()... \n");
+    printf("=== MYSH get_job() TEST DRIVER ===\n");
+    printf("Type any command to test parsing (use 'exit' to quit)\n\n");
+
+    /* initialize first input */
     get_job(&job);
 
     while (!exitShell) {
-        /* skip empty input */
+        /* ignore empty input */
         if (job.num_stages == 0) {
-	  /* just prompt again */
             get_job(&job);
             continue;
         }
 
-        printf("\nPrint out appended Job structure... \n");
-        printf("Press ANY KEY to continue... \n");
-        getchar();
+        printf("\n--- Parsed Job Structure ---\n");
         print_job(&job);
-        printf("\n");
 
-        /* check if user typed 'exit'*/
-        if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0)
-	  break;
+        /* if user types exit, stop loop */
+        if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
+            exitShell = 1;
+            break;
+        }
 
+        /* simulate running and freeing */
         run_job(&job);
         free_all();
 
-        /* get next command */
+        /* read next command */
         get_job(&job);
     }
 
+    printf("\nExiting MYSH test driver.\n");
     return 0;
 }
 
-
-/* ---
+/* --- 
 Function Name: print_job
-
-Purpose: 
-  Prints all information contained in a Job structure for debugging 
-  purposes. This includes the number of stages, input/output file paths, 
-  background execution flag, and all commands in the pipeline with their 
-  respective arguments.
-
-Input:
-  job - pointer to a Job structure whose contents will be printed.
-
-Output:
-  Prints the Job's number of stages, infile/outfile paths, background flag, 
-  and the arguments of each Command in the pipeline to standard output.
+Purpose:
+  Prints all fields from Job and Command structs for verification.
 --- */
 void print_job(Job *job)
 {
-    printf("# of stages: %u\n", job->num_stages);
+    printf("Number of stages: %u\n", job->num_stages);
+    printf("Background: %s\n", job->background ? "yes" : "no");
     printf("Input file: %s\n", job->infile_path ? job->infile_path : "none");
     printf("Output file: %s\n", job->outfile_path ? job->outfile_path : "none");
-    printf("Background: %s\n", job->background ? "yes" : "no");
 
     for (unsigned int i = 0; i < job->num_stages; i++) {
         Command *cmd = &job->pipeline[i];
