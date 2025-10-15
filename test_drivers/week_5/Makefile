@@ -10,10 +10,10 @@ mystring.o: mystring.c mystring.h
 myheap.o: myheap.c myheap.h
 	gcc -c myheap.c
 
-runjob.o: runjob.c jobs.h runjob.h
+runjob.o: runjob.c jobs.h runjob.h errors.h
 	gcc -c runjob.c
 
-getjob.o: getjob.c jobs.h getjob.h 
+getjob.o: getjob.c jobs.h getjob.h errors.h
 	gcc -c getjob.c
 
 errors.o: errors.c errors.h

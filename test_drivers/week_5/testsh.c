@@ -55,13 +55,6 @@ int main(int argc, char *argv[], char *envp[])
         run_job(&job);
         free_all();
 
-        printf("\n");
-        printf("Printing out appended Job structure inside SHELL LOOP...\n");
-        printf("Press ANY KEY to continue...\n");
-        getchar();
-        print_job(&job);
-        printf("\n");
-
         /* get next command */
         get_job(&job);
     }

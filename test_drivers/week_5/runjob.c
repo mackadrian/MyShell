@@ -1,6 +1,8 @@
 #include "runjob.h"
 #include "mystring.h"
 #include "myheap.h"
+#include "errors.h"
+
 #include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
 #include <sys/wait.h>  // waitpid
 
@@ -31,7 +33,7 @@ void run_job(Job *job)
     int pipefd[MAX_PIPELINE_LEN-1][2];
 
     for (int i=0; i<num_stages-1; i++)
-        if (pipe(pipefd[i]) < 0) write(STD_ERR, "pipe failed\n", 12);
+      if (pipe(pipefd[i]) < 0) print_error(ERR_PIPE_FAIL);
 
     for (int i=0; i<num_stages; i++) {
         int pid = fork();
