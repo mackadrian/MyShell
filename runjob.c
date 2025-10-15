@@ -30,6 +30,8 @@ void run_job(Job *job)
 
         if (pid == 0) {
             /* --- Child process --- */
+	  signal(SIGINT,SIG_DFL);
+	  signal(SIGTSTP, SIG_DFL);
 
             /* input redirection */
             if (i == 0 && job->infile_path) {
