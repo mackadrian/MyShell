@@ -29,17 +29,9 @@ Output:
 void get_job(Job *job)
 {
     /* reset job structure */
-    job->num_stages = 0;
-    job->background = 0;
-    job->infile_path = NULL;
-    job->outfile_path = NULL;
+    set_job(job);
 
     char *command_buffer = alloc(MAX_ARGS);
-    if (!command_buffer) {
-        print_error(ERR_EXEC_FAIL);
-        return;
-    }
-
     write(STD_OUT, SHELL, mystrlen(SHELL));
 
     int bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
@@ -106,9 +98,6 @@ void get_job(Job *job)
 }
 
 
-
-
-
 /* ---
 Function Name: parse_stage
 
@@ -153,4 +142,23 @@ void parse_stage(Command *cmd, char *stage_str)
     }
 
     cmd->argv[cmd->argc] = NULL;
+}
+
+
+/* --- 
+Function Name: set_job
+Purpose: 
+    Resets all fields of a Job structure to their default/empty state.
+Input:
+    job - pointer to a Job structure
+Output:
+    job fields are reset
+--- */
+void set_job(Job *job)
+{
+    job->num_stages = 0;
+    job->background = 0;
+    job->infile_path = NULL;
+    job->outfile_path = NULL;
+
 }

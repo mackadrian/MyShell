@@ -37,7 +37,7 @@ int main(int argc, char *argv[], char *envp[])
     while (!exitShell) {
         /* skip empty input */
         if (job.num_stages == 0) {
-            /* just prompt again */
+	  /* just prompt again */
             get_job(&job);
             continue;
         }
@@ -48,9 +48,9 @@ int main(int argc, char *argv[], char *envp[])
         print_job(&job);
         printf("\n");
 
-        /* check if user typed 'exit' */
+        /* check if user typed 'exit'*/
         if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0)
-            break;
+	  break;
 
         run_job(&job);
         free_all();
