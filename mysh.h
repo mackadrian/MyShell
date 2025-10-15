@@ -6,17 +6,9 @@
 #include <sys/wait.h>   // for waitpid(), WIFEXITED, etc.
 
 /*CONSTANTS*/
+#define SHELL "MyShell>> $ "
 #define STD_IN 0
 #define STD_OUT 1
 #define STD_ERR 2
-
-/*FUNCTION DECLARATIONS*/
-void get_command(Command *command);
-int run_command(Command *command);
-
-void get_job(Job *job);
-void run_job(Job *job);
-
-int tokenize(char *buffer, char *tokens[], int max_tokens);
 
 #endif

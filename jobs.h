@@ -1,7 +1,7 @@
 #ifndef JOBS_H
 #define JOBS_H
 
-#define MAX_ARGS 256
+#define MAX_ARGS 1024
 #define MAX_PIPELINE_LEN 10
 
 typedef struct
