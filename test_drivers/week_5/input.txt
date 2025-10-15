@@ -1,0 +1,1 @@
+"from cmd prompt to input.txt"

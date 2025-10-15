@@ -12,10 +12,9 @@ Function Name: get_job
 Purpose: 
   Reads an entire job command line from user input, parses it into one 
   or more pipeline stages, and stores the results in the provided Job 
-  structure. The function identifies background execution requests 
-  (via '&') and splits the command line by pipes ('|') to create 
-  multiple Command stages for pipelined execution. Each stage is 
-  tokenized separately using parse_stage().
+  structure. It identifies background execution requests (via '&') and 
+  splits the command line by pipes ('|') to create multiple Command 
+  stages. Each stage is tokenized separately using parse_stage().
 
 Input:
   job - pointer to a Job structure that will store the parsed command
@@ -32,9 +31,9 @@ void get_job(Job *job)
     set_job(job);
 
     char *command_buffer = alloc(MAX_ARGS);
-    write(STD_OUT, SHELL, mystrlen(SHELL));
+    write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
 
-    int bytes_read = read(STD_IN, command_buffer, MAX_ARGS);
+    int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
     if (bytes_read < 0) {
         print_error(ERR_EXEC_FAIL);
         return;
@@ -49,7 +48,7 @@ void get_job(Job *job)
     if (command_buffer[bytes_read - 1] == '\n') {
         command_buffer[bytes_read - 1] = '\0';
     } else {
-        command_buffer[bytes_read] = '\0'; /* ensure null termination */
+        command_buffer[bytes_read] = '\0';
     }
 
     /* skip leading whitespace */
@@ -63,21 +62,11 @@ void get_job(Job *job)
         return;
     }
 
-    /* --- FIX: trim trailing whitespace before checking for '&' --- */
-    int len = mystrlen(command_buffer);
-    while (len > 0 && (command_buffer[len - 1] == ' ' || command_buffer[len - 1] == '\t')) {
-        command_buffer[--len] = '\0';
-    }
-
     /* check for background execution (&) */
+    int len = mystrlen(command_buffer);
     if (len > 0 && command_buffer[len - 1] == '&') {
         job->background = 1;
-        command_buffer[--len] = '\0';
-
-        /* trim any whitespace before the '&' */
-        while (len > 0 && (command_buffer[len - 1] == ' ' || command_buffer[len - 1] == '\t')) {
-            command_buffer[--len] = '\0';
-        }
+        command_buffer[len - 1] = '\0';
     }
 
     /* parse pipeline stages separated by '|' */
@@ -93,7 +82,9 @@ void get_job(Job *job)
                 stage_start++;
 
             if (command_buffer[stage_start] != '\0') {
-                parse_stage(&job->pipeline[job->num_stages], &command_buffer[stage_start]);
+                parse_stage(&job->pipeline[job->num_stages],
+                            &command_buffer[stage_start],
+                            job);
                 job->num_stages++;
             }
 
@@ -107,26 +98,29 @@ void get_job(Job *job)
     /* NOTE: do NOT call free_all() here — call it after run_job() in your shell loop */
 }
 
+
 /* ---
 Function Name: parse_stage
 
 Purpose: 
   Tokenizes a single stage of a pipeline command string into individual 
-  arguments and stores them in the provided Command structure. It splits 
-  the stage string based on whitespace and appends each token to the 
-  argument vector (argv) of the Command. The argument count (argc) is 
-  updated accordingly.
+  arguments and stores them in the provided Command structure. It also 
+  detects input/output redirection symbols ('<' and '>') and updates 
+  the Job structure accordingly. Only normal command arguments are 
+  added to argv.
 
 Input:
   cmd       - pointer to a Command structure to store the parsed arguments.
   stage_str - pointer to a null-terminated string representing one stage 
               of a pipeline (a single command and its arguments).
+  job       - pointer to the Job structure to set infile_path/outfile_path.
 
 Output:
   Populates the Command structure with parsed arguments and sets the 
-  argument count (argc). The argv array is null-terminated.
+  argument count (argc). Updates job->infile_path and job->outfile_path.
+  The argv array is null-terminated.
 --- */
-void parse_stage(Command *cmd, char *stage_str)
+void parse_stage(Command *cmd, char *stage_str, Job *job)
 {
     cmd->argc = 0;
     int i = 0;
@@ -135,24 +129,45 @@ void parse_stage(Command *cmd, char *stage_str)
         /* skip whitespace */
         while (stage_str[i] == ' ' || stage_str[i] == '\t')
             i++;
-
         if (stage_str[i] == '\0')
             break;
 
         int start = i;
-
         while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
             i++;
 
+        char *token = &stage_str[start];
         if (stage_str[i] != '\0')
             stage_str[i++] = '\0';
 
-        cmd->argv[cmd->argc++] = &stage_str[start];
+        /* handle input redirection */
+        if (mystrcmp(token, "<") == 0) {
+            while (stage_str[i] == ' ' || stage_str[i] == '\t')
+                i++;
+            start = i;
+            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
+                i++;
+            if (stage_str[i] != '\0') stage_str[i++] = '\0';
+            job->infile_path = &stage_str[start];
+        }
+        /* handle output redirection */
+        else if (mystrcmp(token, ">") == 0) {
+            while (stage_str[i] == ' ' || stage_str[i] == '\t')
+                i++;
+            start = i;
+            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
+                i++;
+            if (stage_str[i] != '\0') stage_str[i++] = '\0';
+            job->outfile_path = &stage_str[start];
+        }
+        /* normal argument */
+        else {
+            cmd->argv[cmd->argc++] = token;
+        }
     }
 
     cmd->argv[cmd->argc] = NULL;
 }
-
 
 /* --- 
 Function Name: set_job
