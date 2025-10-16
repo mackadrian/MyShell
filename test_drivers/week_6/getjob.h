@@ -6,8 +6,12 @@
 
 void get_job(Job *job);
 void set_job(Job *job);
-void parse_stage(Command * cmd, char *stage_str, Job *job);
 int check_read_status(int bytes_read);
+void parse_stage(Command *cmd, char *stage_str, Job *job);
+
+static void parse_argument(Command *cmd, char *token);
+static void parse_input_redirection(Job *job, char *stage_str, int *i);
+static void parse_output_redirection(Job *job, char *stage_str, int *i);
 
 static void normalize_newlines(char *buffer);
 static void trim_newline(char *buffer, int bytes_read);

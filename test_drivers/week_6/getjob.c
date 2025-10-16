@@ -124,60 +124,58 @@ static void handle_background(Job *job, char *buffer)
 /* ---
 Function Name: parse_pipeline
 Purpose:
-    Splits command buffer into pipeline stages separated by '|'
-    and calls parse_stage for each stage
+    Splits command buffer into pipeline stages separated by '|', trims
+    whitespace and newlines, and calls parse_stage for each stage.
+    Safely handles empty stages and avoids infinite loops for malformed input.
 Input:
-    job - pointer to Job structure
-    buffer - command buffer
-    start - starting index of first stage
+    job    - pointer to Job structure to populate
+    buffer - command buffer to parse
+    start  - starting index of first stage
 Output:
     Populates job->pipeline and job->num_stages
 --- */
 static void parse_pipeline(Job *job, char *buffer, int start)
 {
     int stage_start = start;
+
     for (int i = start;; i++) {
         char c = buffer[i];
-        if (c == '|' || c == '\0') {
-            buffer[i] = '\0';
 
-            /* skip leading whitespace for this stage */
-            while (buffer[stage_start] == ' ' || buffer[stage_start] == '\t')
+        /* end of stage or end of string */
+        if (c == '|' || c == '\0') {
+            buffer[i] = '\0';  // terminate current stage
+
+            /* skip leading whitespace/newlines for this stage */
+            while (buffer[stage_start] == ' ' || buffer[stage_start] == '\t' || buffer[stage_start] == '\n')
                 stage_start++;
 
+            /* only parse non-empty stages */
             if (buffer[stage_start] != '\0') {
-                parse_stage(&job->pipeline[job->num_stages],
-                            &buffer[stage_start],
-                            job);
+                parse_stage(&job->pipeline[job->num_stages], &buffer[stage_start], job);
                 job->num_stages++;
             }
 
+            /* break if end of string reached */
             if (c == '\0') break;
-            stage_start = i + 1;
+
+            stage_start = i + 1;  // start of next stage
         }
     }
 }
 
+
 /* ---
 Function Name: parse_stage
-
-Purpose: 
-  Tokenizes a single stage of a pipeline command string into individual 
-  arguments and stores them in the provided Command structure. It also 
-  detects input/output redirection symbols ('<' and '>') and updates 
-  the Job structure accordingly. Only normal command arguments are 
-  added to argv.
-
+Purpose:
+    Tokenizes a single stage of a pipeline command into arguments,
+    input/output redirection. Uses helper functions to handle each
+    type of token.
 Input:
-  cmd       - pointer to a Command structure to store the parsed arguments.
-  stage_str - pointer to a null-terminated string representing one stage 
-              of a pipeline (a single command and its arguments).
-  job       - pointer to the Job structure to set infile_path/outfile_path.
-
+    cmd - pointer to Command structure
+    stage_str - null-terminated stage string
+    job - pointer to Job structure
 Output:
-  Populates the Command structure with parsed arguments and sets the 
-  argument count (argc). Updates job->infile_path and job->outfile_path.
-  The argv array is null-terminated.
+    Populates cmd->argv, cmd->argc, job->infile_path, and job->outfile_path
 --- */
 void parse_stage(Command *cmd, char *stage_str, Job *job)
 {
@@ -185,48 +183,83 @@ void parse_stage(Command *cmd, char *stage_str, Job *job)
     int i = 0;
 
     while (stage_str[i] != '\0') {
-        /* skip whitespace */
-        while (stage_str[i] == ' ' || stage_str[i] == '\t')
-            i++;
-        if (stage_str[i] == '\0')
-            break;
+        while (stage_str[i] == ' ' || stage_str[i] == '\t') i++;
+        if (stage_str[i] == '\0') break;
 
         int start = i;
         while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
             i++;
 
         char *token = &stage_str[start];
-        if (stage_str[i] != '\0')
-            stage_str[i++] = '\0';
+        if (stage_str[i] != '\0') stage_str[i++] = '\0';
 
-        /* handle input redirection */
         if (mystrcmp(token, "<") == 0) {
-            while (stage_str[i] == ' ' || stage_str[i] == '\t')
-                i++;
-            start = i;
-            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-                i++;
-            if (stage_str[i] != '\0') stage_str[i++] = '\0';
-            job->infile_path = &stage_str[start];
-        }
-        /* handle output redirection */
-        else if (mystrcmp(token, ">") == 0) {
-            while (stage_str[i] == ' ' || stage_str[i] == '\t')
-                i++;
-            start = i;
-            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-                i++;
-            if (stage_str[i] != '\0') stage_str[i++] = '\0';
-            job->outfile_path = &stage_str[start];
-        }
-        /* normal argument */
-        else {
-            cmd->argv[cmd->argc++] = token;
+            parse_input_redirection(job, stage_str, &i);
+        } else if (mystrcmp(token, ">") == 0) {
+            parse_output_redirection(job, stage_str, &i);
+        } else {
+            parse_argument(cmd, token);
         }
     }
 
     cmd->argv[cmd->argc] = NULL;
 }
+
+/* ---
+Function Name: parse_argument
+Purpose:
+    Adds a normal argument token to the Command structure.
+Input:
+    cmd - pointer to Command structure
+    token - argument string
+Output:
+    Updates cmd->argv and cmd->argc
+--- */
+static void parse_argument(Command *cmd, char *token)
+{
+    cmd->argv[cmd->argc++] = token;
+}
+
+/* ---
+Function Name: parse_input_redirection
+Purpose:
+    Parses an input redirection token ('< infile') and updates Job infile_path.
+Input:
+    job - pointer to Job structure
+    stage_str - stage string containing redirection
+    i - pointer to current index in stage_str; updated after parsing
+Output:
+    Sets job->infile_path
+--- */
+static void parse_input_redirection(Job *job, char *stage_str, int *i)
+{
+    while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
+    int start = *i;
+    while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
+    if (stage_str[*i] != '\0') stage_str[(*i)++] = '\0';
+    job->infile_path = &stage_str[start];
+}
+
+/* ---
+Function Name: parse_output_redirection
+Purpose:
+    Parses an output redirection token ('> outfile') and updates Job outfile_path.
+Input:
+    job - pointer to Job structure
+    stage_str - stage string containing redirection
+    i - pointer to current index in stage_str; updated after parsing
+Output:
+    Sets job->outfile_path
+--- */
+static void parse_output_redirection(Job *job, char *stage_str, int *i)
+{
+    while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
+    int start = *i;
+    while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
+    if (stage_str[*i] != '\0') stage_str[(*i)++] = '\0';
+    job->outfile_path = &stage_str[start];
+}
+
 
 /* --- 
 Function Name: set_job
