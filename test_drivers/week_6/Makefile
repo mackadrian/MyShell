@@ -13,6 +13,9 @@ mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o
 test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o
 	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_getjob
 
+test_runjob: test_runjob.o mystring.o myheap.o runjob.o errors.o
+	$(CC) test_runjob.o mystring.o myheap.o runjob.o errors.o -o test_runjob
+
 # ----------------------
 # Object files
 # ----------------------
@@ -43,13 +46,16 @@ signal.o: signal.c signal.h
 test_getjob.o: test_getjob.c jobs.h getjob.h mystring.h myheap.h errors.h
 	$(CC) $(CFLAGS) test_getjob.c
 
+test_runjob.o: test_runjob.c jobs.h runjob.h mystring.h myheap.h errors.h
+	$(CC) $(CFLAGS) test_runjob.c
+
 # ----------------------
 # Clean
 # ----------------------
 clean:
-	/usr/bin/rm -f *.o mysh test_getjob
+	/usr/bin/rm -f *.o mysh test_getjob test_runjob
 
 # ----------------------
 # Build everything
 # ----------------------
-all: mysh test_getjob
+all: mysh test_getjob test_runjob
