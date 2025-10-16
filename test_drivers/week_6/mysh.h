@@ -11,6 +11,6 @@
 #define STD_OUT 1
 #define STD_ERR 2
 
-void remove_zombies();
-
+static void remove_zombies();
+static void initialize_signal_handler();
 #endif
