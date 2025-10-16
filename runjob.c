@@ -124,11 +124,10 @@ void run_job(Job *job, char* envp[])
             // execute command
             char *fullpath = resolve_command_path(job->pipeline[i].argv[0], envp);
             if (!fullpath) {
-                const char msg1[] = "MyShell: ";
-                const char msg2[] = ": command not found\n";
-                write(STDERR_FILENO, msg1, sizeof(msg1)-1);
+                const char msg1[] = ": command not found\n";
+                //write(STDERR_FILENO, msg1, sizeof(msg1)-1);
                 write(STDERR_FILENO, job->pipeline[i].argv[0], mystrlen(job->pipeline[i].argv[0]));
-                write(STDERR_FILENO, msg2, sizeof(msg2)-1);
+                write(STDERR_FILENO, msg1, sizeof(msg1)-1);
                 _exit(1);
             }
             execve(fullpath, job->pipeline[i].argv, envp);
