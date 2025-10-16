@@ -45,14 +45,12 @@ void get_job(Job *job)
             free_all();
             return;
         }
-
         if (bytes_read > MAX_ARGS) {
             print_error(ERR_ARG_EXCD);
             free_all();
             return;
         }
-
-        break; // successful read
+        break;
     }
 
     trim_newline(command_buffer, mystrlen(command_buffer));

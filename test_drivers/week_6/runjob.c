@@ -20,26 +20,25 @@ Input:
 Output:
     Executes all stages of the job. Waits for foreground jobs; prints info for background jobs.
 --- */
-void run_job(Job *job, char* envp[])
+void run_job(Job *job, char *envp[])
 {
     int pipefd[MAX_PIPELINE_LEN - 1][2];
     int pids[MAX_PIPELINE_LEN];
 
-    if (!job || job->num_stages == 0)
-        return;
+    if (!job || job->num_stages == 0) return;
 
     /* Track foreground/background job */
-    if (job->background)
-        fg_job_running = 0;
-    else
-        fg_job_running = 1;
+    fg_job_running = !job->background;
 
     create_pipes(pipefd, job->num_stages);
 
     for (int i = 0; i < job->num_stages; i++) {
         pids[i] = fork_and_execute_stage(i, job, envp, pipefd);
-        if (pids[i] < 0)
+        if (pids[i] < 0) {
+            fg_job_running = 0;
+            free_all();
             return;
+        }
     }
 
     /* Close all pipes in parent */
@@ -48,20 +47,19 @@ void run_job(Job *job, char* envp[])
         close(pipefd[i][1]);
     }
 
-    if (!job->background) {
-    for (int i = 0; i < job->num_stages; i++) {
+    if (job->background) {
+        print_background_pid(job, pids[0]);
+        fg_job_running = 0;
+    } else {
         int status;
-        waitpid(pids[i], &status, 0);
-        if (WIFSIGNALED(status)) {
-            // Optional: print a newline if ^C was pressed
-            if (WTERMSIG(status) == SIGINT)
-                write(STDOUT_FILENO, "\n", 1);
-            continue;
+        for (int i = 0; i < job->num_stages; i++) {
+            waitpid(pids[i], &status, 0);
+            /* Reset fg_job_running if process was interrupted */
+            if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
+                break;
         }
+        fg_job_running = 0;  // foreground job finished
     }
-    fg_job_running = 0;
-}
-
 
     free_all();
 }
@@ -108,19 +106,15 @@ char *resolve_command_path(const char *cmd, char *envp[])
     if (!cmd || cmd[0] == '\0')
         return NULL;
 
-    /* If cmd has '/', treat as literal path */
+    // If cmd contains '/', treat as literal path
     for (int k = 0; cmd[k]; k++) {
         if (cmd[k] == '/') {
             struct stat st;
-            if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR)) {
+            if (stat(cmd, &st) == 0) { // ignore execute bit for simplicity
                 int len = 0;
-                while (cmd[len])
-                    len++;
+                while (cmd[len]) len++;
                 char *copy = alloc(len + 1);
-                if (!copy)
-                    return NULL;
-                for (int i = 0; i <= len; i++)
-                    copy[i] = cmd[i];
+                for (int i = 0; i <= len; i++) copy[i] = cmd[i];
                 return copy;
             } else {
                 return NULL;
@@ -128,48 +122,37 @@ char *resolve_command_path(const char *cmd, char *envp[])
         }
     }
 
-    /* Get PATH from environment */
+    // Get PATH from envp
     char *path_env = NULL;
     for (int i = 0; envp[i]; i++) {
-        /* Use mystrcmp to detect the PATH variable */
-        if (envp[i][0] == 'P' && envp[i][1] == 'A' &&
-            envp[i][2] == 'T' && envp[i][3] == 'H' &&
-            envp[i][4] == '=') {
+        if (envp[i][0]=='P' && envp[i][1]=='A' && envp[i][2]=='T' && envp[i][3]=='H' && envp[i][4]=='=')
+        {
             path_env = envp[i] + 5;
             break;
         }
     }
 
     if (!path_env)
-        path_env = "/usr/local/bin:/usr/bin:/bin";
+        path_env = "/bin:/usr/bin";
 
-    /* Copy PATH for tokenization */
     char path_copy[1024];
     int len = 0;
-    while (path_env[len] && len < 1023) {
-        path_copy[len] = path_env[len];
-        len++;
-    }
+    while (path_env[len] && len < 1023) { path_copy[len] = path_env[len]; len++; }
     path_copy[len] = '\0';
 
     char *start = path_copy;
     for (int i = 0; i <= len; i++) {
         if (path_copy[i] == ':' || path_copy[i] == '\0') {
             path_copy[i] = '\0';
-
             char fullpath[512];
             build_fullpath(fullpath, start, cmd);
 
             struct stat st;
-            if (stat(fullpath, &st) == 0 && (st.st_mode & S_IXUSR)) {
+            if (stat(fullpath, &st) == 0) {  // just check existence
                 int plen = 0;
-                while (fullpath[plen])
-                    plen++;
+                while (fullpath[plen]) plen++;
                 char *result = alloc(plen + 1);
-                if (!result)
-                    return NULL;
-                for (int j = 0; j <= plen; j++)
-                    result[j] = fullpath[j];
+                for (int j = 0; j <= plen; j++) result[j] = fullpath[j];
                 return result;
             }
 
@@ -179,6 +162,8 @@ char *resolve_command_path(const char *cmd, char *envp[])
 
     return NULL;
 }
+
+
 
 
 /* ---
@@ -264,42 +249,51 @@ Output:
 static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
                                   int pipefd[MAX_PIPELINE_LEN - 1][2])
 {
+    if (job->pipeline[stage_index].argc == 0 ||
+        job->pipeline[stage_index].argv[0] == NULL ||
+        job->pipeline[stage_index].argv[0][0] == '\0') {
+        return -1;
+    }
+
     int pid = fork();
     if (pid < 0) {
         print_error(ERR_FORK_FAIL);
         return -1;
     }
 
-    if (pid == 0) { // child
-        // Child restores default signal handling
+    if (pid == 0) { // CHILD PROCESS
+     
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
+        
         setup_redirection(stage_index, job->num_stages, job, pipefd);
 
+        // Resolve full path of command
         char *fullpath = resolve_command_path(job->pipeline[stage_index].argv[0], envp);
         if (!fullpath) {
+            // Print "command not found" including the command
             write(STDERR_FILENO, job->pipeline[stage_index].argv[0],
                   mystrlen(job->pipeline[stage_index].argv[0]));
             write(STDERR_FILENO, error_messages[ERR_CMD_NOT_FOUND],
                   mystrlen(error_messages[ERR_CMD_NOT_FOUND]));
-            free_all();
             _exit(1);
         }
 
         execve(fullpath, job->pipeline[stage_index].argv, envp);
 
-        // Only executed if execve fails
-        write(STDERR_FILENO, job->pipeline[stage_index].argv[0],
-              mystrlen(job->pipeline[stage_index].argv[0]));
-        write(STDERR_FILENO, error_messages[ERR_EXEC_FAIL],
-              mystrlen(error_messages[ERR_EXEC_FAIL]));
-        free_all();
-        _exit(1);
+        // Only print execution error if fg_job_running is 0 (not interrupted by Ctrl+C)
+        if (fg_job_running) {
+            _exit(1);
+        } else {
+            print_error(ERR_EXEC_FAIL);
+            _exit(1);
+        }
     }
 
-    return pid; // parent returns PID
+    return pid;
 }
+
 
 
 
