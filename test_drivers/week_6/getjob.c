@@ -296,7 +296,7 @@ int check_read_status(int bytes_read)
     print_error(ERR_EXEC_FAIL);
     exit_status = -1;
   } else if (bytes_read > MAX_ARGS) {
-    print_error(ARG_EXCD_FAIL);
+    print_error(ERR_ARG_EXCD);
     exit_status = -1;
   } else {
     free_all();

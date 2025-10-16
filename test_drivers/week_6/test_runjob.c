@@ -6,26 +6,38 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 // FUNCTION DECLARATIONS
 void print_job(Job *job);
 void set_test_job(Job *job);
+
 void test_normal_command(char* envp[]);
 void test_pipeline_command(char* envp[]);
 void test_background_command(char* envp[]);
 void test_redirection_command(char* envp[]);
 
+void test_invalid_command(char* envp[]);
+void test_missing_file_command(char* envp[]);
+
 // MAIN
 int main(int argc, char* argv[], char* envp[])
 {
+    printf("=== Standard RunJob Tests ===\n");
     test_normal_command(envp);
     test_pipeline_command(envp);
     test_background_command(envp);
+    test_redirection_command(envp);
 
+    printf("\n=== Error Handling Tests ===\n");
+    test_invalid_command(envp);
+    test_missing_file_command(envp);
+    
     return 0;
 }
 
 // FUNCTION DEFINITIONS
+
 void print_job(Job *job)
 {
     printf("Number of stages: %d\n", job->num_stages);
@@ -55,6 +67,19 @@ void set_test_job(Job *job)
     }
 }
 
+void build_cmdline(Job *job, char *cmdline, size_t size)
+{
+    cmdline[0] = '\0';
+    for (int i = 0; i < job->num_stages; i++) {
+        for (int j = 0; j < job->pipeline[i].argc; j++) {
+            strncat(cmdline, job->pipeline[i].argv[j], size - strlen(cmdline) - 1);
+            strncat(cmdline, " ", size - strlen(cmdline) - 1);
+        }
+        if (i < job->num_stages - 1) strncat(cmdline, "| ", size - strlen(cmdline) - 1);
+    }
+    if (job->background) strncat(cmdline, "&", size - strlen(cmdline) - 1);
+}
+
 void test_normal_command(char* envp[])
 {
     Job job;
@@ -66,25 +91,8 @@ void test_normal_command(char* envp[])
     job.pipeline[0].argv[1] = "-l";
     job.pipeline[0].argv[2] = NULL;
 
-    // Build shell-like command string with escaped newlines
-    char cmdline[256] = "";
-    for (int i = 0; i < job.num_stages; i++) {
-        for (int j = 0; j < job.pipeline[i].argc; j++) {
-            char *arg = job.pipeline[i].argv[j];
-            for (int k = 0; arg[k]; k++) {
-                if (arg[k] == '\n') strcat(cmdline, "\\n");
-                else {
-                    int len = strlen(cmdline);
-                    cmdline[len] = arg[k];
-                    cmdline[len+1] = '\0';
-                }
-            }
-            strcat(cmdline, " ");
-        }
-        if (i < job.num_stages - 1) strcat(cmdline, "| ");
-    }
-    if (job.background) strcat(cmdline, "&");
-
+    char cmdline[256];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
     printf("Test: %s\n", cmdline);
     print_job(&job);
 
@@ -114,25 +122,8 @@ void test_pipeline_command(char* envp[])
 
     job.num_stages = 3;
 
-    // Build shell-like command string with escaped newlines
-    char cmdline[512] = "";
-    for (int i = 0; i < job.num_stages; i++) {
-        for (int j = 0; j < job.pipeline[i].argc; j++) {
-            char *arg = job.pipeline[i].argv[j];
-            for (int k = 0; arg[k]; k++) {
-                if (arg[k] == '\n') strcat(cmdline, "\\n");
-                else {
-                    int len = strlen(cmdline);
-                    cmdline[len] = arg[k];
-                    cmdline[len+1] = '\0';
-                }
-            }
-            strcat(cmdline, " ");
-        }
-        if (i < job.num_stages - 1) strcat(cmdline, "| ");
-    }
-    if (job.background) strcat(cmdline, "&");
-
+    char cmdline[512];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
     printf("Test: %s\n", cmdline);
     print_job(&job);
 
@@ -152,28 +143,80 @@ void test_background_command(char* envp[])
     job.pipeline[0].argv[1] = "2";
     job.pipeline[0].argv[2] = NULL;
 
-    // Build shell-like command string with escaped newlines
-    char cmdline[128] = "";
-    for (int i = 0; i < job.num_stages; i++) {
-        for (int j = 0; j < job.pipeline[i].argc; j++) {
-            char *arg = job.pipeline[i].argv[j];
-            for (int k = 0; arg[k]; k++) {
-                if (arg[k] == '\n') strcat(cmdline, "\\n");
-                else {
-                    int len = strlen(cmdline);
-                    cmdline[len] = arg[k];
-                    cmdline[len+1] = '\0';
-                }
-            }
-            strcat(cmdline, " ");
-        }
-        if (i < job.num_stages - 1) strcat(cmdline, "| ");
-    }
-    if (job.background) strcat(cmdline, "&");
-
+    char cmdline[128];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
     printf("Test: %s\n", cmdline);
     print_job(&job);
 
     run_job(&job, envp);
+    printf("-------------------------------------------------\n");
+}
+
+void test_redirection_command(char* envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 2;
+    job.infile_path = "input.txt";
+    job.outfile_path = "output.txt";
+
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "sort";
+    job.pipeline[0].argv[1] = NULL;
+
+    job.pipeline[1].argc = 1;
+    job.pipeline[1].argv[0] = "uniq";
+    job.pipeline[1].argv[1] = NULL;
+
+    char cmdline[256];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
+    printf("Test: %s < %s | %s > %s\n",
+           job.pipeline[0].argv[0], job.infile_path,
+           job.pipeline[1].argv[0], job.outfile_path);
+    print_job(&job);
+
+    run_job(&job, envp);
+    printf("-------------------------------------------------\n");
+}
+
+void test_invalid_command(char* envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "nonexistentcmd";
+    job.pipeline[0].argv[1] = NULL;
+
+    char cmdline[128];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
+    printf("Test: %s\n", cmdline);
+    print_job(&job);
+
+    run_job(&job, envp);
+    printf("Expected error: %s", error_messages[ERR_CMD_NOT_FOUND]);
+    printf("-------------------------------------------------\n");
+}
+
+void test_missing_file_command(char* envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.infile_path = "nonexistentfile.txt";
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "cat";
+    job.pipeline[0].argv[1] = NULL;
+
+    char cmdline[128];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
+    printf("Test: %s\n", cmdline);
+    print_job(&job);
+
+    run_job(&job, envp);
+    printf("Expected error: %s", error_messages[ERR_FILE_NOT_FOUND]);
     printf("-------------------------------------------------\n");
 }

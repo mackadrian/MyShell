@@ -114,11 +114,24 @@ static void setup_redirection(int stage_index, int num_stages, Job *job, int pip
 {
     if (stage_index == 0 && job->infile_path) {
         int fd = open(job->infile_path, O_RDONLY);
+        if (fd < 0) {
+            // Print "<filename>: file not found\n"
+            write(STDERR_FILENO, job->infile_path, mystrlen(job->infile_path));
+            write(STDERR_FILENO, error_messages[ERR_FILE_NOT_FOUND], mystrlen(error_messages[ERR_FILE_NOT_FOUND]));
+            _exit(1);
+        }
         dup2(fd, STDIN_FILENO);
         close(fd);
     }
+
     if (stage_index == num_stages - 1 && job->outfile_path) {
         int fd = creat(job->outfile_path, 0644);
+        if (fd < 0) {
+            // Print "<filename>: file not found\n"
+            write(STDERR_FILENO, job->outfile_path, mystrlen(job->outfile_path));
+            write(STDERR_FILENO, error_messages[ERR_FILE_NOT_FOUND], mystrlen(error_messages[ERR_FILE_NOT_FOUND]));
+            _exit(1);
+        }
         dup2(fd, STDOUT_FILENO);
         close(fd);
     }
@@ -132,6 +145,7 @@ static void setup_redirection(int stage_index, int num_stages, Job *job, int pip
         close(pipefd[i][1]);
     }
 }
+
 
 /* ---
 Function Name: fork_and_execute_stage
@@ -148,7 +162,10 @@ Output:
 static int fork_and_execute_stage(int stage_index, Job *job, char* envp[], int pipefd[MAX_PIPELINE_LEN-1][2])
 {
     int pid = fork();
-    if (pid < 0) { print_error(ERR_FORK_FAIL); return -1; }
+    if (pid < 0) {
+        print_error(ERR_FORK_FAIL);
+        return -1;
+    }
 
     if (pid == 0) { // child
         signal(SIGINT, SIG_DFL);
@@ -158,19 +175,25 @@ static int fork_and_execute_stage(int stage_index, Job *job, char* envp[], int p
 
         char *fullpath = resolve_command_path(job->pipeline[stage_index].argv[0], envp);
         if (!fullpath) {
-            const char msg[] = ": command not found\n";
+            // "<command>: command not found\n"
             write(STDERR_FILENO, job->pipeline[stage_index].argv[0], mystrlen(job->pipeline[stage_index].argv[0]));
-            write(STDERR_FILENO, msg, sizeof(msg) - 1);
+            write(STDERR_FILENO, error_messages[ERR_CMD_NOT_FOUND], mystrlen(error_messages[ERR_CMD_NOT_FOUND]));
             _exit(1);
         }
 
-        execve(fullpath, job->pipeline[stage_index].argv, envp);
+        if (execve(fullpath, job->pipeline[stage_index].argv, envp) < 0) {
+            print_error(ERR_EXEC_FAIL);
+            free(fullpath);
+            _exit(1);
+        }
+
         free(fullpath);
         _exit(1);
     }
 
     return pid; // parent
 }
+
 
 /* ---
 Function Name: handle_background_job
