@@ -13,8 +13,8 @@ mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o
 test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o
 	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_getjob
 
-test_runjob: test_runjob.o mystring.o myheap.o runjob.o errors.o
-	$(CC) test_runjob.o mystring.o myheap.o runjob.o errors.o -o test_runjob
+test_runjob: test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o
+	$(CC) test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o -o test_runjob
 
 # ----------------------
 # Object files
