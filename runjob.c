@@ -7,7 +7,70 @@
 #include <sys/wait.h>  // waitpid
 #include <fcntl.h>     // open, creat
 
-void run_job(Job *job)
+static void build_fullpath(char *buf, const char *dir, const char *cmd) {
+    int i = 0;
+    while (dir[i]) { buf[i] = dir[i]; i++; }
+    buf[i++] = '/';
+    int j = 0;
+    while (cmd[j]) buf[i++] = cmd[j++];
+    buf[i] = '\0';
+}
+
+char* resolve_command_path(const char *cmd, char *envp[]) {
+    if (!cmd || cmd[0] == '\0') return NULL;
+
+    // If cmd contains '/', treat as literal path
+    for (int k = 0; cmd[k]; k++) {
+        if (cmd[k] == '/') {
+            struct stat st;
+            if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR))
+                return strdup(cmd);  // still need malloc to return path
+            else
+                return NULL;
+        }
+    }
+
+    // Get PATH from environment
+    char *path_env = NULL;
+    for (int i = 0; envp[i]; i++) {
+        if (envp[i][0]=='P' && envp[i][1]=='A' && envp[i][2]=='T' && envp[i][3]=='H' && envp[i][4]=='=')
+            { path_env = envp[i]+5; break; }
+    }
+    if (!path_env)
+        path_env = "/usr/local/bin:/usr/bin:/bin";  // fallback default
+
+    // Copy PATH into buffer for tokenization
+    char path_copy[1024];
+    int len = 0;
+    while (path_env[len] && len < 1023) { path_copy[len] = path_env[len]; len++; }
+    path_copy[len] = '\0';
+
+    // Tokenize PATH by ':'
+    char *start = path_copy;
+    for (int i = 0; i <= len; i++) {
+        if (path_copy[i] == ':' || path_copy[i] == '\0') {
+            path_copy[i] = '\0';
+
+            char fullpath[512];
+            build_fullpath(fullpath, start, cmd);
+
+            struct stat st;
+            if (stat(fullpath, &st) == 0 && (st.st_mode & S_IXUSR)) {
+                // return malloc'ed copy of fullpath
+                int plen = 0; while (fullpath[plen]) plen++;
+                char *result = (char*)malloc(plen+1);
+                for (int j = 0; j <= plen; j++) result[j] = fullpath[j];
+                return result;
+            }
+
+            start = &path_copy[i+1];
+        }
+    }
+
+    return NULL;  // not found
+}
+
+void run_job(Job *job, char* envp[])
 {
     int num_stages = job->num_stages;
     int pipefd[MAX_PIPELINE_LEN-1][2];
@@ -60,11 +123,20 @@ void run_job(Job *job)
             }
 
             /* execute command */
-            char fullpath[256];
-            mystrcpy(fullpath, "/usr/bin/");
-            mystrcat(fullpath, job->pipeline[i].argv[0]);
-            execve(fullpath, job->pipeline[i].argv, NULL);
-            _exit(1);
+			char *fullpath = resolve_command_path(job->pipeline[i].argv[0], envp); // pass envp from main
+			if (!fullpath) {
+   				// command not found, write to stderr
+    			const char msg1[] = "MyShell: ";
+    			const char msg2[] = ": command not found\n";
+    			write(STDERR_FILENO, msg1, sizeof(msg1)-1);
+    			write(STDERR_FILENO, job->pipeline[i].argv[0], mystrlen(job->pipeline[i].argv[0]));
+   				write(STDERR_FILENO, msg2, sizeof(msg2)-1);
+    			_exit(1);
+			}
+
+			execve(fullpath, job->pipeline[i].argv, envp);  // pass envp
+			free(fullpath);  // free malloc'ed string if execve fails
+			_exit(1);        // safety, should never be reached if exec succeeds
         } 
         else {
             /* --- Parent process --- */
