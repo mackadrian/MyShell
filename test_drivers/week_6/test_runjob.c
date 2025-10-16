@@ -26,7 +26,6 @@ int main(int argc, char* argv[], char* envp[])
 }
 
 // FUNCTION DEFINITIONS
-
 void print_job(Job *job)
 {
     printf("Number of stages: %d\n", job->num_stages);
@@ -67,11 +66,19 @@ void test_normal_command(char* envp[])
     job.pipeline[0].argv[1] = "-l";
     job.pipeline[0].argv[2] = NULL;
 
-    // Build shell-like command string
+    // Build shell-like command string with escaped newlines
     char cmdline[256] = "";
     for (int i = 0; i < job.num_stages; i++) {
         for (int j = 0; j < job.pipeline[i].argc; j++) {
-            strcat(cmdline, job.pipeline[i].argv[j]);
+            char *arg = job.pipeline[i].argv[j];
+            for (int k = 0; arg[k]; k++) {
+                if (arg[k] == '\n') strcat(cmdline, "\\n");
+                else {
+                    int len = strlen(cmdline);
+                    cmdline[len] = arg[k];
+                    cmdline[len+1] = '\0';
+                }
+            }
             strcat(cmdline, " ");
         }
         if (i < job.num_stages - 1) strcat(cmdline, "| ");
@@ -107,11 +114,19 @@ void test_pipeline_command(char* envp[])
 
     job.num_stages = 3;
 
-    // Build shell-like command string
+    // Build shell-like command string with escaped newlines
     char cmdline[512] = "";
     for (int i = 0; i < job.num_stages; i++) {
         for (int j = 0; j < job.pipeline[i].argc; j++) {
-            strcat(cmdline, job.pipeline[i].argv[j]);
+            char *arg = job.pipeline[i].argv[j];
+            for (int k = 0; arg[k]; k++) {
+                if (arg[k] == '\n') strcat(cmdline, "\\n");
+                else {
+                    int len = strlen(cmdline);
+                    cmdline[len] = arg[k];
+                    cmdline[len+1] = '\0';
+                }
+            }
             strcat(cmdline, " ");
         }
         if (i < job.num_stages - 1) strcat(cmdline, "| ");
@@ -137,11 +152,19 @@ void test_background_command(char* envp[])
     job.pipeline[0].argv[1] = "2";
     job.pipeline[0].argv[2] = NULL;
 
-    // Build shell-like command string
+    // Build shell-like command string with escaped newlines
     char cmdline[128] = "";
     for (int i = 0; i < job.num_stages; i++) {
         for (int j = 0; j < job.pipeline[i].argc; j++) {
-            strcat(cmdline, job.pipeline[i].argv[j]);
+            char *arg = job.pipeline[i].argv[j];
+            for (int k = 0; arg[k]; k++) {
+                if (arg[k] == '\n') strcat(cmdline, "\\n");
+                else {
+                    int len = strlen(cmdline);
+                    cmdline[len] = arg[k];
+                    cmdline[len+1] = '\0';
+                }
+            }
             strcat(cmdline, " ");
         }
         if (i < job.num_stages - 1) strcat(cmdline, "| ");
