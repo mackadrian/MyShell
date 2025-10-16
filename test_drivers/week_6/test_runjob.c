@@ -67,10 +67,22 @@ void test_normal_command(char* envp[])
     job.pipeline[0].argv[1] = "-l";
     job.pipeline[0].argv[2] = NULL;
 
-    printf("Test: ls -l\n");
+    // Build shell-like command string
+    char cmdline[256] = "";
+    for (int i = 0; i < job.num_stages; i++) {
+        for (int j = 0; j < job.pipeline[i].argc; j++) {
+            strcat(cmdline, job.pipeline[i].argv[j]);
+            strcat(cmdline, " ");
+        }
+        if (i < job.num_stages - 1) strcat(cmdline, "| ");
+    }
+    if (job.background) strcat(cmdline, "&");
+
+    printf("Test: %s\n", cmdline);
     print_job(&job);
 
     run_job(&job, envp);
+    printf("-------------------------------------------------\n");
 }
 
 void test_pipeline_command(char* envp[])
@@ -95,10 +107,22 @@ void test_pipeline_command(char* envp[])
 
     job.num_stages = 3;
 
-    printf("Test: echo | grep | sort\n");
+    // Build shell-like command string
+    char cmdline[512] = "";
+    for (int i = 0; i < job.num_stages; i++) {
+        for (int j = 0; j < job.pipeline[i].argc; j++) {
+            strcat(cmdline, job.pipeline[i].argv[j]);
+            strcat(cmdline, " ");
+        }
+        if (i < job.num_stages - 1) strcat(cmdline, "| ");
+    }
+    if (job.background) strcat(cmdline, "&");
+
+    printf("Test: %s\n", cmdline);
     print_job(&job);
 
     run_job(&job, envp);
+    printf("-------------------------------------------------\n");
 }
 
 void test_background_command(char* envp[])
@@ -113,9 +137,20 @@ void test_background_command(char* envp[])
     job.pipeline[0].argv[1] = "2";
     job.pipeline[0].argv[2] = NULL;
 
-    printf("Test: sleep 2 &\n");
+    // Build shell-like command string
+    char cmdline[128] = "";
+    for (int i = 0; i < job.num_stages; i++) {
+        for (int j = 0; j < job.pipeline[i].argc; j++) {
+            strcat(cmdline, job.pipeline[i].argv[j]);
+            strcat(cmdline, " ");
+        }
+        if (i < job.num_stages - 1) strcat(cmdline, "| ");
+    }
+    if (job.background) strcat(cmdline, "&");
+
+    printf("Test: %s\n", cmdline);
     print_job(&job);
 
     run_job(&job, envp);
+    printf("-------------------------------------------------\n");
 }
-
