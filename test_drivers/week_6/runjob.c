@@ -241,6 +241,7 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
     }
 
     if (pid == 0) { /* CHILD */
+      setpgid(0,0);
         /* Reset signal handlers in child */
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);

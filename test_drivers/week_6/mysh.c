@@ -5,6 +5,7 @@
 #include "runjob.h"  
 #include "signal.h"
 #include "mysh.h"
+#include "builtin.h"
 
 #include <stdlib.h>
 #include <unistd.h>
