@@ -2,6 +2,7 @@
 #include "mystring.h"
 #include "myheap.h"
 #include "errors.h"
+#include "signal.h"
 
 #include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
 #include <sys/wait.h>  // waitpid
@@ -274,6 +275,14 @@ void run_job(Job *job, char* envp[])
     int pipefd[MAX_PIPELINE_LEN-1][2];
     int pids[MAX_PIPELINE_LEN];
 
+    if (!job || job->num_stages == 0) return;
+
+    if (job->background) {
+      fg_job_running = 0;
+    } else {
+      fg_job_running = 1;
+    }
+    
     create_pipes(pipefd, job->num_stages);
 
     for (int i = 0; i < job->num_stages; i++) {
@@ -288,9 +297,10 @@ void run_job(Job *job, char* envp[])
     }
 
     if (job->background) {
-    print_background_pid(job, pids[0]);
-    } else {
-    for (int i = 0; i < job->num_stages; i++) 
+      print_background_pid(job, pids[0]);
+    } else { 
+      for (int i = 0; i < job->num_stages; i++) 
         waitpid(pids[i], NULL, 0);
+      fg_job_running = 0;
     }
 }

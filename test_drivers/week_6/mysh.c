@@ -36,7 +36,7 @@ int main(int argc, char *argv[], char *envp[])
     struct sigaction sa;
     sa.sa_handler = handle_signal;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
+    sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL); // handle ^C
     signal(SIGTSTP, SIG_IGN); // ignore ^Z
     
