@@ -56,7 +56,7 @@ int main(int argc, char *argv[], char *envp[])
             break;
         }
 
-        run_job(&job);
+        run_job(&job, envp);
         free_all();
         get_job(&job);
     }

@@ -4,6 +4,7 @@
 #include "jobs.h"
 #include "mysh.h"
 
-void run_job (Job *job);
+char* resolve_command_path(const char *cmd, char *envp[]);
+void run_job (Job *job, char* envp[]);
 
 #endif
