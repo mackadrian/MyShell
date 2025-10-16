@@ -1,8 +1,0 @@
-#ifndef SIGNAL_H
-#define SIGNAL_H
-
-#define SIGNAL_PROMPT "\nmysh$ "
-
-void handle_signal(int sig);
-
-#endif
