@@ -36,37 +36,21 @@ void get_job(Job *job)
     /* Install signal handler for Ctrl+C */
     signal(SIGINT, handle_signal);
 
-    while (1) {
-        write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
+    /* Prompt and read command line */
+    write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
+    int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
+    if (bytes_read <= 0) return;
 
-        int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
-
-        if (bytes_read < 0) {
-            free_all();
-            return;
-        }
-        if (bytes_read > MAX_ARGS) {
-            print_error(ERR_ARG_EXCD);
-            free_all();
-            return;
-        }
-        break;
-    }
-
-    trim_newline(command_buffer, mystrlen(command_buffer));
+    trim_newline(command_buffer, bytes_read);
     normalize_newlines(command_buffer);
 
     int start = skip_leading_whitespace(command_buffer);
-    if (command_buffer[start] == '\0') {
-        free_all();
-        return;
-    }
+    if (command_buffer[start] == '\0') return;
 
     handle_background(job, command_buffer);
     parse_pipeline(job, command_buffer, start);
-
-    free_all();
 }
+
 
 /* ---
 Function Name: normalize_newlines
@@ -158,24 +142,20 @@ static void parse_pipeline(Job *job, char *buffer, int start)
     for (int i = start;; i++) {
         char c = buffer[i];
 
-        /* end of stage or end of string */
         if (c == '|' || c == '\0') {
-            buffer[i] = '\0';  // terminate current stage
+            buffer[i] = '\0';
 
-            /* skip leading whitespace/newlines for this stage */
             while (buffer[stage_start] == ' ' || buffer[stage_start] == '\t' || buffer[stage_start] == '\n')
                 stage_start++;
 
-            /* only parse non-empty stages */
             if (buffer[stage_start] != '\0') {
                 parse_stage(&job->pipeline[job->num_stages], &buffer[stage_start], job);
                 job->num_stages++;
             }
 
-            /* break if end of string reached */
             if (c == '\0') break;
 
-            stage_start = i + 1;  // start of next stage
+            stage_start = i + 1;
         }
     }
 }
@@ -204,11 +184,13 @@ void parse_stage(Command *cmd, char *stage_str, Job *job)
         if (stage_str[i] == '\0') break;
 
         int start = i;
-        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-            i++;
+        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0') i++;
 
-        char *token = &stage_str[start];
-        if (stage_str[i] != '\0') stage_str[i++] = '\0';
+        /* Copy token to heap */
+        int tok_len = i - start;
+        char *token = alloc(tok_len + 1);
+        for (int j = 0; j < tok_len; j++) token[j] = stage_str[start + j];
+        token[tok_len] = '\0';
 
         if (mystrcmp(token, "<") == 0) {
             parse_input_redirection(job, stage_str, &i);
@@ -217,10 +199,13 @@ void parse_stage(Command *cmd, char *stage_str, Job *job)
         } else {
             parse_argument(cmd, token);
         }
+
+        if (stage_str[i] != '\0') i++;
     }
 
     cmd->argv[cmd->argc] = NULL;
 }
+
 
 /* ---
 Function Name: parse_argument
@@ -253,8 +238,13 @@ static void parse_input_redirection(Job *job, char *stage_str, int *i)
     while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
     int start = *i;
     while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
-    if (stage_str[*i] != '\0') stage_str[(*i)++] = '\0';
-    job->infile_path = &stage_str[start];
+    int len = *i - start;
+    char *path = alloc(len + 1);
+    for (int j = 0; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = '\0';
+    job->infile_path = path;
+
+    if (stage_str[*i] != '\0') (*i)++;
 }
 
 /* ---
@@ -273,8 +263,13 @@ static void parse_output_redirection(Job *job, char *stage_str, int *i)
     while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
     int start = *i;
     while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
-    if (stage_str[*i] != '\0') stage_str[(*i)++] = '\0';
-    job->outfile_path = &stage_str[start];
+    int len = *i - start;
+    char *path = alloc(len + 1);
+    for (int j = 0; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = '\0';
+    job->outfile_path = path;
+
+    if (stage_str[*i] != '\0') (*i)++;
 }
 
 
