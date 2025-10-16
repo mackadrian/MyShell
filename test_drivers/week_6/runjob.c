@@ -28,6 +28,7 @@ void run_job(Job *job, char* envp[])
     if (!job || job->num_stages == 0)
         return;
 
+    /* Track foreground/background job */
     if (job->background)
         fg_job_running = 0;
     else
@@ -41,7 +42,7 @@ void run_job(Job *job, char* envp[])
             return;
     }
 
-    /* close all pipes in parent */
+    /* Close all pipes in parent */
     for (int i = 0; i < job->num_stages - 1; i++) {
         close(pipefd[i][0]);
         close(pipefd[i][1]);
@@ -52,14 +53,24 @@ void run_job(Job *job, char* envp[])
     } else {
         for (int i = 0; i < job->num_stages; i++)
             waitpid(pids[i], NULL, 0);
+
         fg_job_running = 0;
     }
 
-    /* clear custom heap after job finishes */
     free_all();
 }
 
-/* Helper: concatenate directory + "/" + cmd into buf */
+/* ---
+Function Name: build_fullpath
+Purpose:
+    Concatenates a directory path and a command into a single path buffer.
+Input:
+    buf - output buffer
+    dir - directory path
+    cmd - command name
+Output:
+    Stores the full path in buf.
+--- */
 static void build_fullpath(char *buf, const char *dir, const char *cmd)
 {
     int i = 0;
@@ -75,13 +86,23 @@ static void build_fullpath(char *buf, const char *dir, const char *cmd)
     buf[i] = '\0';
 }
 
-/* System-call-only PATH search */
-char* resolve_command_path(const char *cmd, char *envp[])
+/* ---
+Function Name: resolve_command_path
+Purpose:
+    Resolves the full path of a command using the PATH environment variable.
+Input:
+    cmd - command name
+    envp - environment variables
+Output:
+    Returns a heap-allocated string containing the command’s full path if found,
+    or NULL if not found.
+--- */
+char *resolve_command_path(const char *cmd, char *envp[])
 {
     if (!cmd || cmd[0] == '\0')
         return NULL;
 
-    /* If cmd contains '/', treat as literal path */
+    /* If cmd has '/', treat as literal path */
     for (int k = 0; cmd[k]; k++) {
         if (cmd[k] == '/') {
             struct stat st;
@@ -104,15 +125,19 @@ char* resolve_command_path(const char *cmd, char *envp[])
     /* Get PATH from environment */
     char *path_env = NULL;
     for (int i = 0; envp[i]; i++) {
-        if (envp[i][0] == 'P' && envp[i][1] == 'A' && envp[i][2] == 'T' &&
-            envp[i][3] == 'H' && envp[i][4] == '=') {
+        /* Use mystrcmp to detect the PATH variable */
+        if (envp[i][0] == 'P' && envp[i][1] == 'A' &&
+            envp[i][2] == 'T' && envp[i][3] == 'H' &&
+            envp[i][4] == '=') {
             path_env = envp[i] + 5;
             break;
         }
     }
+
     if (!path_env)
         path_env = "/usr/local/bin:/usr/bin:/bin";
 
+    /* Copy PATH for tokenization */
     char path_copy[1024];
     int len = 0;
     while (path_env[len] && len < 1023) {
@@ -125,6 +150,7 @@ char* resolve_command_path(const char *cmd, char *envp[])
     for (int i = 0; i <= len; i++) {
         if (path_copy[i] == ':' || path_copy[i] == '\0') {
             path_copy[i] = '\0';
+
             char fullpath[512];
             build_fullpath(fullpath, start, cmd);
 
@@ -140,20 +166,22 @@ char* resolve_command_path(const char *cmd, char *envp[])
                     result[j] = fullpath[j];
                 return result;
             }
+
             start = &path_copy[i + 1];
         }
     }
 
-    return NULL; /* not found */
+    return NULL;
 }
+
 
 /* ---
 Function Name: create_pipes
 Purpose:
-    Creates the necessary pipes for a pipeline of commands.
+    Creates pipes for inter-process communication between pipeline stages.
 Input:
-    pipefd - 2D array to hold pipe file descriptors
-    num_stages - number of pipeline stages
+    pipefd - 2D array to hold file descriptors
+    num_stages - number of stages in pipeline
 Output:
     Initializes pipefd. Prints error if pipe creation fails.
 --- */
@@ -168,14 +196,14 @@ static void create_pipes(int pipefd[MAX_PIPELINE_LEN - 1][2], int num_stages)
 /* ---
 Function Name: setup_redirection
 Purpose:
-    Sets up input/output redirection for a pipeline stage.
+    Handles I/O redirection for each stage in the pipeline.
 Input:
-    stage_index - index of the current pipeline stage
+    stage_index - index of the current stage
     num_stages - total number of stages
     job - pointer to Job structure
     pipefd - 2D array of pipe file descriptors
 Output:
-    Duplicates file descriptors to STDIN_FILENO and STDOUT_FILENO as needed.
+    Sets up file descriptors appropriately for input/output.
 --- */
 static void setup_redirection(int stage_index, int num_stages, Job *job,
                               int pipefd[MAX_PIPELINE_LEN - 1][2])
@@ -209,7 +237,6 @@ static void setup_redirection(int stage_index, int num_stages, Job *job,
     if (stage_index < num_stages - 1)
         dup2(pipefd[stage_index][1], STDOUT_FILENO);
 
-    /* close all pipes */
     for (int i = 0; i < num_stages - 1; i++) {
         close(pipefd[i][0]);
         close(pipefd[i][1]);
@@ -219,16 +246,16 @@ static void setup_redirection(int stage_index, int num_stages, Job *job,
 /* ---
 Function Name: fork_and_execute_stage
 Purpose:
-    Forks a child process for a single pipeline stage and executes the command.
+    Forks and executes a command stage in the pipeline.
 Input:
-    stage_index - index of the current stage
+    stage_index - index of current stage
     job - pointer to Job structure
     envp - environment variables
     pipefd - 2D array of pipe file descriptors
 Output:
-    Executes the command in the child. Returns child's pid to parent.
+    Executes the command in a child and returns its PID.
 --- */
-static int fork_and_execute_stage(int stage_index, Job *job, char* envp[],
+static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
                                   int pipefd[MAX_PIPELINE_LEN - 1][2])
 {
     int pid = fork();
@@ -237,7 +264,8 @@ static int fork_and_execute_stage(int stage_index, Job *job, char* envp[],
         return -1;
     }
 
-    if (pid == 0) { /* child */
+    if (pid == 0) {
+        /* Child process should respond to Ctrl+C normally */
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
@@ -252,26 +280,23 @@ static int fork_and_execute_stage(int stage_index, Job *job, char* envp[],
             _exit(1);
         }
 
-        if (execve(fullpath, job->pipeline[stage_index].argv, envp) < 0) {
-            print_error(ERR_EXEC_FAIL);
-            _exit(1);
-        }
-
+        execve(fullpath, job->pipeline[stage_index].argv, envp);
+        print_error(ERR_EXEC_FAIL);
         _exit(1);
     }
 
-    return pid; /* parent */
+    return pid;
 }
 
 /* ---
 Function Name: print_background_pid
 Purpose:
-    Prints the background job information for the first stage of a pipeline.
+    Displays background job process ID.
 Input:
     job - pointer to Job structure
-    pid - process ID of the first stage
+    pid - process ID of first command in pipeline
 Output:
-    Writes "[background pid ...] command" to STDOUT_FILENO
+    Prints background job info to STDOUT.
 --- */
 static void print_background_pid(Job *job, int pid)
 {
@@ -284,6 +309,7 @@ static void print_background_pid(Job *job, int pid)
         pid_str[n++] = (temp_pid % 10) + '0';
         temp_pid /= 10;
     }
+
     for (int j = 0; j < n; j++)
         pid_str[j] = pid_str[n - j - 1];
     pid_str[n] = '\0';

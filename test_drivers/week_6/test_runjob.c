@@ -12,16 +12,17 @@
 void print_job(Job *job);
 void set_test_job(Job *job);
 
-void test_normal_command(char* envp[]);
-void test_pipeline_command(char* envp[]);
-void test_background_command(char* envp[]);
-void test_redirection_command(char* envp[]);
+void test_normal_command(char *envp[]);
+void test_pipeline_command(char *envp[]);
+void test_background_command(char *envp[]);
+void test_redirection_command(char *envp[]);
 
-void test_invalid_command(char* envp[]);
-void test_missing_file_command(char* envp[]);
+void test_invalid_command(char *envp[]);
+void test_missing_file_command(char *envp[]);
+void test_sigint_handling(char *envp[]);
 
 // MAIN
-int main(int argc, char* argv[], char* envp[])
+int main(int argc, char *argv[], char *envp[])
 {
     printf("=== Standard RunJob Tests ===\n");
     test_normal_command(envp);
@@ -32,6 +33,10 @@ int main(int argc, char* argv[], char* envp[])
     printf("\n=== Error Handling Tests ===\n");
     test_invalid_command(envp);
     test_missing_file_command(envp);
+
+    printf("\n=== Signal Handling Tests ===\n");
+    test_sigint_handling(envp);
+
     
     return 0;
 }
@@ -80,7 +85,7 @@ void build_cmdline(Job *job, char *cmdline, size_t size)
     if (job->background) strncat(cmdline, "&", size - strlen(cmdline) - 1);
 }
 
-void test_normal_command(char* envp[])
+void test_normal_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -100,7 +105,7 @@ void test_normal_command(char* envp[])
     printf("-------------------------------------------------\n");
 }
 
-void test_pipeline_command(char* envp[])
+void test_pipeline_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -131,7 +136,7 @@ void test_pipeline_command(char* envp[])
     printf("-------------------------------------------------\n");
 }
 
-void test_background_command(char* envp[])
+void test_background_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -152,7 +157,7 @@ void test_background_command(char* envp[])
     printf("-------------------------------------------------\n");
 }
 
-void test_redirection_command(char* envp[])
+void test_redirection_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -180,7 +185,7 @@ void test_redirection_command(char* envp[])
     printf("-------------------------------------------------\n");
 }
 
-void test_invalid_command(char* envp[])
+void test_invalid_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -200,7 +205,7 @@ void test_invalid_command(char* envp[])
     printf("-------------------------------------------------\n");
 }
 
-void test_missing_file_command(char* envp[])
+void test_missing_file_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -218,5 +223,37 @@ void test_missing_file_command(char* envp[])
 
     run_job(&job, envp);
     printf("Expected error: %s", error_messages[ERR_FILE_NOT_FOUND]);
+    printf("-------------------------------------------------\n");
+}
+
+void test_sigint_handling(char *envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.pipeline[0].argc = 2;
+    job.pipeline[0].argv[0] = "sleep";
+    job.pipeline[0].argv[1] = "50";
+    job.pipeline[0].argv[2] = NULL;
+
+    char cmdline[128];
+    build_cmdline(&job, cmdline, sizeof(cmdline));
+    printf("Test: %s (sending SIGINT after 5 second)\n", cmdline);
+    print_job(&job);
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        /* Child runs the job */
+        run_job(&job, envp);
+        _exit(0);
+    } else {
+        /* Parent waits a moment then sends SIGINT */
+        sleep(1);
+        kill(pid, SIGINT);
+        printf("Sent SIGINT to child process %d\n", pid);
+        waitpid(pid, NULL, 0);
+    }
+
     printf("-------------------------------------------------\n");
 }
