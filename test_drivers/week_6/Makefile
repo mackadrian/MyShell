@@ -10,8 +10,8 @@ mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o
 # ----------------------
 # Test driver for get_job
 # ----------------------
-test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o
-	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_getjob
+test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o
+	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o -o test_getjob
 
 test_runjob: test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o
 	$(CC) test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o -o test_runjob
@@ -31,7 +31,7 @@ myheap.o: myheap.c myheap.h
 runjob.o: runjob.c jobs.h runjob.h errors.h
 	$(CC) $(CFLAGS) runjob.c
 
-getjob.o: getjob.c jobs.h getjob.h errors.h
+getjob.o: getjob.c jobs.h getjob.h errors.h signal.h
 	$(CC) $(CFLAGS) getjob.c
 
 errors.o: errors.c errors.h

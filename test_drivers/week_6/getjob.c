@@ -2,6 +2,7 @@
 #include "mystring.h"
 #include "myheap.h"
 #include "errors.h"
+#include "signal.h"
 
 #include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
 #include <sys/wait.h>  // waitpid
@@ -30,22 +31,43 @@ void get_job(Job *job)
     set_job(job);
 
     char *command_buffer = alloc(MAX_ARGS);
-    write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
+    if (!command_buffer) return;
 
-    int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
+    /* Install signal handler for Ctrl+C */
+    signal(SIGINT, handle_signal);
 
-    if (check_read_status(bytes_read) != 0) return;
+    while (1) {
+        write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
 
-    trim_newline(command_buffer, bytes_read);
+        int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
+
+        if (bytes_read < 0) {
+            free_all();
+            return;
+        }
+
+        if (bytes_read > MAX_ARGS) {
+            print_error(ERR_ARG_EXCD);
+            free_all();
+            return;
+        }
+
+        break; // successful read
+    }
+
+    trim_newline(command_buffer, mystrlen(command_buffer));
     normalize_newlines(command_buffer);
+
     int start = skip_leading_whitespace(command_buffer);
     if (command_buffer[start] == '\0') {
-      free_all();
-      return;
+        free_all();
+        return;
     }
 
     handle_background(job, command_buffer);
     parse_pipeline(job, command_buffer, start);
+
+    free_all();
 }
 
 /* ---
@@ -79,10 +101,8 @@ Output:
 static void trim_newline(char *buffer, int bytes_read)
 {
     if (bytes_read <= 0) return;
-    if (buffer[bytes_read - 1] == '\n')
-        buffer[bytes_read - 1] = '\0';
-    else
-        buffer[bytes_read] = '\0';
+    if (buffer[bytes_read - 1] == '\n') buffer[bytes_read - 1] = '\0';
+    else buffer[bytes_read] = '\0';
 }
 
 /* ---
@@ -97,8 +117,7 @@ Output:
 static int skip_leading_whitespace(char *buffer)
 {
     int i = 0;
-    while (buffer[i] == ' ' || buffer[i] == '\t')
-        i++;
+    while (buffer[i] == ' ' || buffer[i] == '\t') i++;
     return i;
 }
 
@@ -290,17 +309,16 @@ Output:
 --- */
 int check_read_status(int bytes_read)
 {
-  int exit_status = 0;
+    int exit_status = 0;
 
-  if (bytes_read < 0) {
-    print_error(ERR_EXEC_FAIL);
-    exit_status = -1;
-  } else if (bytes_read > MAX_ARGS) {
-    print_error(ERR_ARG_EXCD);
-    exit_status = -1;
-  } else {
-    free_all();
-  }
+    if (bytes_read < 0) {
+        exit_status = -1;
+    } else if (bytes_read > MAX_ARGS) {
+        print_error(ERR_ARG_EXCD);
+        exit_status = -1;
+    } else if (bytes_read > 0) {
+        free_all();
+    }
 
-  return exit_status;
+    return exit_status;
 }

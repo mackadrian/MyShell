@@ -48,14 +48,20 @@ void run_job(Job *job, char* envp[])
         close(pipefd[i][1]);
     }
 
-    if (job->background) {
-        print_background_pid(job, pids[0]);
-    } else {
-        for (int i = 0; i < job->num_stages; i++)
-            waitpid(pids[i], NULL, 0);
-
-        fg_job_running = 0;
+    if (!job->background) {
+    for (int i = 0; i < job->num_stages; i++) {
+        int status;
+        waitpid(pids[i], &status, 0);
+        if (WIFSIGNALED(status)) {
+            // Optional: print a newline if ^C was pressed
+            if (WTERMSIG(status) == SIGINT)
+                write(STDOUT_FILENO, "\n", 1);
+            continue;
+        }
     }
+    fg_job_running = 0;
+}
+
 
     free_all();
 }
@@ -264,8 +270,8 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
         return -1;
     }
 
-    if (pid == 0) {
-        /* Child process should respond to Ctrl+C normally */
+    if (pid == 0) { // child
+        // Child restores default signal handling
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
@@ -277,16 +283,25 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
                   mystrlen(job->pipeline[stage_index].argv[0]));
             write(STDERR_FILENO, error_messages[ERR_CMD_NOT_FOUND],
                   mystrlen(error_messages[ERR_CMD_NOT_FOUND]));
+            free_all();
             _exit(1);
         }
 
         execve(fullpath, job->pipeline[stage_index].argv, envp);
-        print_error(ERR_EXEC_FAIL);
+
+        // Only executed if execve fails
+        write(STDERR_FILENO, job->pipeline[stage_index].argv[0],
+              mystrlen(job->pipeline[stage_index].argv[0]));
+        write(STDERR_FILENO, error_messages[ERR_EXEC_FAIL],
+              mystrlen(error_messages[ERR_EXEC_FAIL]));
+        free_all();
         _exit(1);
     }
 
-    return pid;
+    return pid; // parent returns PID
 }
+
+
 
 /* ---
 Function Name: print_background_pid
