@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-/* --------------------- FUNCTION DECLARATIONS --------------------- */
+// FUNCTION DECLARATIONS
 void print_job(Job *job);
 void test_normal_command();
 void test_pipeline_command();
@@ -16,8 +16,9 @@ void test_redirection_command();
 void test_bytes_read_negative();
 void test_bytes_read_zero();
 void test_bytes_read_overflow();
+void test_get_job_from_stdin();
 
-/* --------------------- MAIN --------------------- */
+// MAIN
 int main(void)
 {
     test_normal_command();
@@ -27,10 +28,15 @@ int main(void)
     test_bytes_read_negative();
     test_bytes_read_zero();
     test_bytes_read_overflow();
+
+    printf("Integration test: get_job() reading from stdin\n");
+    printf("Feed input via stdin (Ctrl+D to end if typing manually)\n");
+    test_get_job_from_stdin();
+
     return 0;
 }
 
-/* --------------------- FUNCTION DEFINITIONS --------------------- */
+// FUNCTION DEFINITIONS
 
 /* ---
 Function Name: print_job
@@ -178,4 +184,19 @@ void test_bytes_read_overflow()
     int status = check_read_status(MAX_ARGS + 100);
     printf("check_read_status returned %d\n", status);
     printf("-------------------------------------------------\n");
+}
+
+/* ---
+Function Name: test_get_job_from_stdin
+Purpose:
+    Tests get_job() with actual stdin input (can feed file via < or pipe)
+--- */
+void test_get_job_from_stdin()
+{
+    Job job;
+    set_job(&job);
+
+    get_job(&job);  /* reads from stdin */
+
+    print_job(&job);
 }

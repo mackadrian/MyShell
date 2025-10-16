@@ -37,6 +37,7 @@ void get_job(Job *job)
     if (check_read_status(bytes_read) != 0) return;
 
     trim_newline(command_buffer, bytes_read);
+    normalize_newlines(command_buffer);
     int start = skip_leading_whitespace(command_buffer);
     if (command_buffer[start] == '\0') {
       free_all();
@@ -45,6 +46,23 @@ void get_job(Job *job)
 
     handle_background(job, command_buffer);
     parse_pipeline(job, command_buffer, start);
+}
+
+/* ---
+Function Name: normalize_newlines
+Purpose:
+    Replaces internal '\n' with spaces to avoid breaking parser
+Input:
+    buffer - null-terminated command string
+Output:
+    Modifies buffer in place
+--- */
+static void normalize_newlines(char *buffer)
+{
+    for (int i = 0; buffer[i] != '\0'; i++) {
+        if (buffer[i] == '\n')
+            buffer[i] = ' ';
+    }
 }
 
 
