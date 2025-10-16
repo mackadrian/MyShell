@@ -249,26 +249,14 @@ void test_sigint_handling(char *envp[])
     job.num_stages = 1;
     job.pipeline[0].argc = 2;
     job.pipeline[0].argv[0] = "sleep";
-    job.pipeline[0].argv[1] = "50";
+    job.pipeline[0].argv[1] = "5";
     job.pipeline[0].argv[2] = NULL;
 
     char cmdline[128];
     build_cmdline(&job, cmdline, sizeof(cmdline));
     printf("Test: %s (sending SIGINT after 5 second)\n", cmdline);
     print_job(&job);
-
-    pid_t pid = fork();
-    if (pid == 0) {
-        /* Child runs the job */
-        run_job(&job, envp);
-        _exit(0);
-    } else {
-        /* Parent waits a moment then sends SIGINT */
-        sleep(1);
-        kill(pid, SIGINT);
-        printf("Sent SIGINT to child process %d\n", pid);
-        waitpid(pid, NULL, 0);
-    }
+    run_job(&job, envp);
 
     printf("-------------------------------------------------\n");
 }

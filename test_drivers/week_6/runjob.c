@@ -8,6 +8,7 @@
 #include <sys/wait.h>  /* waitpid */
 #include <sys/stat.h>  /* stat */
 #include <fcntl.h>     /* open, creat */
+#include <stdlib.h>    /* malloc for path algorithm */
 
 /* ---
 Function Name: run_job
@@ -74,45 +75,39 @@ Input:
 Output:
     Stores the full path in buf.
 --- */
-static void build_fullpath(char *buf, const char *dir, const char *cmd)
-{
+static void build_fullpath(char *buf, const char *dir, const char *cmd) {
     int i = 0;
-    while (dir[i]) {
-        buf[i] = dir[i];
-        i++;
-    }
+    while (dir[i]) { buf[i] = dir[i]; i++; }
     buf[i++] = '/';
     int j = 0;
-    while (cmd[j]) {
-        buf[i++] = cmd[j++];
-    }
+    while (cmd[j]) buf[i++] = cmd[j++];
     buf[i] = '\0';
 }
 
-/* ---
+
+
+/* --- 
 Function Name: resolve_command_path
 Purpose:
-    Resolves the full path of a command using the PATH environment variable.
+  Resolves the full path of a command using the PATH environment variable.
 Input:
-    cmd - command name
-    envp - environment variables
+  cmd - command name
+  envp - environment variables
 Output:
-    Returns a heap-allocated string containing the command’s full path if found,
-    or NULL if not found.
+  Returns a heap-allocated string containing the command’s full path if found,
+  or NULL if not found.
 --- */
-char *resolve_command_path(const char *cmd, char *envp[])
-{
-    if (!cmd || cmd[0] == '\0')
-        return NULL;
+char* resolve_command_path(const char *cmd, char *envp[]) {
+    if (!cmd || cmd[0] == '\0') return NULL;
 
     // If cmd contains '/', treat as literal path
     for (int k = 0; cmd[k]; k++) {
         if (cmd[k] == '/') {
             struct stat st;
-            if (stat(cmd, &st) == 0) { // ignore execute bit for simplicity
-                int len = 0;
-                while (cmd[len]) len++;
-                char *copy = alloc(len + 1);
+            if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR)) {
+                int len = 0; while (cmd[len]) len++;
+                char *copy = (char*)malloc(len+1);
+                if (!copy) return NULL;
                 for (int i = 0; i <= len; i++) copy[i] = cmd[i];
                 return copy;
             } else {
@@ -121,18 +116,17 @@ char *resolve_command_path(const char *cmd, char *envp[])
         }
     }
 
-    // Get PATH from envp
+    // Get PATH from environment
     char *path_env = NULL;
     for (int i = 0; envp[i]; i++) {
-        if (envp[i][0]=='P' && envp[i][1]=='A' && envp[i][2]=='T' && envp[i][3]=='H' && envp[i][4]=='=')
+        if (envp[i][0]=='P' && envp[i][1]=='A' && envp[i][2]=='T' &&
+            envp[i][3]=='H' && envp[i][4]=='=')
         {
-            path_env = envp[i] + 5;
+            path_env = envp[i]+5;
             break;
         }
     }
-
-    if (!path_env)
-        path_env = "/bin:/usr/bin";
+    if (!path_env) path_env = "/usr/local/bin:/usr/bin:/bin";
 
     char path_copy[1024];
     int len = 0;
@@ -147,20 +141,22 @@ char *resolve_command_path(const char *cmd, char *envp[])
             build_fullpath(fullpath, start, cmd);
 
             struct stat st;
-            if (stat(fullpath, &st) == 0) {  // just check existence
-                int plen = 0;
-                while (fullpath[plen]) plen++;
-                char *result = alloc(plen + 1);
+            if (stat(fullpath, &st) == 0 && (st.st_mode & S_IXUSR)) {
+                int plen = 0; while (fullpath[plen]) plen++;
+                char *result = (char*)malloc(plen+1);
+                if (!result) return NULL;
                 for (int j = 0; j <= plen; j++) result[j] = fullpath[j];
                 return result;
             }
 
-            start = &path_copy[i + 1];
+            start = &path_copy[i+1];
         }
     }
 
-    return NULL;
+    return NULL;  // not found
 }
+
+
 
 /* ---
 Function Name: create_pipes
