@@ -11,7 +11,7 @@ mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o
 # Test driver for get_job
 # ----------------------
 test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o
-	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_get_job
+	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_getjob
 
 # ----------------------
 # Object files

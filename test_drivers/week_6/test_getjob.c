@@ -5,29 +5,48 @@
 #include "jobs.h"
 
 #include <stdio.h>
+#include <string.h>
 
-//FUNCTION DECLARATIONS
+/* --------------------- FUNCTION DECLARATIONS --------------------- */
 void print_job(Job *job);
-void parse_pipeline(Job *job, char *command_line);
-void test1();
-void test2();
-void test3();
-void test4();
+void test_normal_command();
+void test_pipeline_command();
+void test_background_command();
+void test_redirection_command();
+void test_bytes_read_negative();
+void test_bytes_read_zero();
+void test_bytes_read_overflow();
 
-
-int main() {
-    test1();
-    test2();
-    test3();
-    test4();
-    test5();
+/* --------------------- MAIN --------------------- */
+int main(void)
+{
+    test_normal_command();
+    test_pipeline_command();
+    test_background_command();
+    test_redirection_command();
+    test_bytes_read_negative();
+    test_bytes_read_zero();
+    test_bytes_read_overflow();
     return 0;
 }
 
-/* Helper to print a Job structure */
-void print_job(Job *job) {
+/* --------------------- FUNCTION DEFINITIONS --------------------- */
+
+/* ---
+Function Name: print_job
+Purpose:
+    Prints a Job structure, including stages, arguments, and input/output redirection.
+Input:
+    job - pointer to a Job structure
+Output:
+    Prints the parsed job to stdout
+--- */
+void print_job(Job *job)
+{
     printf("Number of stages: %d\n", job->num_stages);
     printf("Background flag: %d\n", job->background);
+    if (job->infile_path) printf("Input file: %s\n", job->infile_path);
+    if (job->outfile_path) printf("Output file: %s\n", job->outfile_path);
 
     for (int i = 0; i < job->num_stages; i++) {
         Command *cmd = &job->pipeline[i];
@@ -39,79 +58,124 @@ void print_job(Job *job) {
     printf("-------------------------------------------------\n");
 }
 
-/* Helper to split a command line by pipes and call parse_stage for each stage */
-void parse_pipeline(Job *job, char *command_line) {
-    set_job(job);
-
-    /* Check for background execution */
-    int len = mystrlen(command_line);
-    if (len > 0 && command_line[len - 1] == '&') {
-        job->background = 1;
-        command_line[len - 1] = '\0';
-    }
-
-    int stage_start = 0;
-    for (int i = 0;; i++) {
-        char c = command_line[i];
-        if (c == '|' || c == '\0') {
-            command_line[i] = '\0';
-
-            /* Skip leading whitespace */
-            while (command_line[stage_start] == ' ' || command_line[stage_start] == '\t')
-                stage_start++;
-
-            if (command_line[stage_start] != '\0') {
-                parse_stage(&job->pipeline[job->num_stages],
-                            &command_line[stage_start],
-                            job);
-                job->num_stages++;
-            }
-
-            if (c == '\0')
-                break;
-
-            stage_start = i + 1;
-        }
-    }
-}
-
-
-void test1() {
+/* ---
+Function Name: test_normal_command
+Purpose:
+    Tests a simple single-stage command
+--- */
+void test_normal_command()
+{
     Job job;
     char command[] = "ls -l";
-    printf("Test 1: '%s'\n", command);
-    parse_pipeline(&job, command);
+
+    set_job(&job);
+    parse_stage(&job.pipeline[job.num_stages], command, &job);
+    job.num_stages++;
+
+    printf("Test: %s\n", command);
     print_job(&job);
 }
 
-void test2() {
+/* ---
+Function Name: test_pipeline_command
+Purpose:
+    Tests a multi-stage pipeline command
+--- */
+void test_pipeline_command()
+{
     Job job;
-    char command[] = "cat file.txt | grep foo | sort";
-    printf("Test 2: '%s'\n", command);
-    parse_pipeline(&job, command);
+    char stage1[] = "cat file.txt";
+    char stage2[] = "grep foo";
+    char stage3[] = "sort";
+
+    set_job(&job);
+    parse_stage(&job.pipeline[job.num_stages], stage1, &job); job.num_stages++;
+    parse_stage(&job.pipeline[job.num_stages], stage2, &job); job.num_stages++;
+    parse_stage(&job.pipeline[job.num_stages], stage3, &job); job.num_stages++;
+
+    printf("Test: cat file.txt | grep foo | sort\n");
     print_job(&job);
 }
 
-void test3() {
+/* ---
+Function Name: test_background_command
+Purpose:
+    Tests a command with background execution
+--- */
+void test_background_command()
+{
     Job job;
     char command[] = "echo hello world &";
-    printf("Test 3: '%s'\n", command);
-    parse_pipeline(&job, command);
+
+    set_job(&job);
+    /* simulate '&' handling */
+    int len = mystrlen(command);
+    if (command[len - 1] == '&') {
+        job.background = 1;
+        command[len - 1] = '\0';
+    }
+
+    parse_stage(&job.pipeline[job.num_stages], command, &job);
+    job.num_stages++;
+
+    printf("Test: echo hello world &\n");
     print_job(&job);
 }
 
-void test4() {
+/* ---
+Function Name: test_redirection_command
+Purpose:
+    Tests input and output redirection
+--- */
+void test_redirection_command()
+{
     Job job;
-    char command[] = "gcc main.c -o main > output.txt";
-    printf("Test 4: '%s'\n", command);
-    parse_pipeline(&job, command);
+    char stage1[] = "sort < unsorted.txt";
+    char stage2[] = "uniq > result.txt";
+
+    set_job(&job);
+    parse_stage(&job.pipeline[job.num_stages], stage1, &job); job.num_stages++;
+    parse_stage(&job.pipeline[job.num_stages], stage2, &job); job.num_stages++;
+
+    printf("Test: sort < unsorted.txt | uniq > result.txt\n");
     print_job(&job);
 }
 
-void test5() {
-    Job job;
-    char command[] = "sort < unsorted.txt | uniq | wc -l";
-    printf("Test 5: '%s'\n", command);
-    parse_pipeline(&job, command);
-    print_job(&job);
+/* ---
+Function Name: test_bytes_read_negative
+Purpose:
+    Simulates bytes_read < 0 (read error)
+--- */
+void test_bytes_read_negative()
+{
+    printf("Test: bytes_read < 0\n");
+    int status = check_read_status(-1);
+    printf("check_read_status returned %d\n", status);
+    printf("-------------------------------------------------\n");
+}
+
+/* ---
+Function Name: test_bytes_read_zero
+Purpose:
+    Simulates bytes_read == 0 (EOF)
+--- */
+void test_bytes_read_zero()
+{
+    printf("Test: bytes_read == 0\n");
+    int status = check_read_status(0);
+    printf("check_read_status returned %d\n", status);
+    printf("-------------------------------------------------\n");
+}
+
+/* ---
+Function Name: test_bytes_read_overflow
+Purpose:
+    Simulates bytes_read > MAX_ARGS
+--- */
+void test_bytes_read_overflow()
+{
+    printf("Test: bytes_read > MAX_ARGS\n");
+    int status = check_read_status(MAX_ARGS + 100);
+    printf("check_read_status returned %d\n", status);
+    printf("-------------------------------------------------\n");
 }

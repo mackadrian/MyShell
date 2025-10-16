@@ -27,67 +27,118 @@ Output:
 --- */
 void get_job(Job *job)
 {
-    /* reset job structure */
     set_job(job);
 
     char *command_buffer = alloc(MAX_ARGS);
     write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
 
     int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
-    int rid = check_read_status(bytes_read);
 
-    /* remove trailing newline if present */
-    if (command_buffer[bytes_read - 1] == '\n') {
-        command_buffer[bytes_read - 1] = '\0';
-    } else {
-        command_buffer[bytes_read] = '\0';
-    }
+    if (check_read_status(bytes_read) != 0) return;
 
-    /* skip leading whitespace */
-    int start = 0;
-    while (command_buffer[start] == ' ' || command_buffer[start] == '\t')
-        start++;
-
+    trim_newline(command_buffer, bytes_read);
+    int start = skip_leading_whitespace(command_buffer);
     if (command_buffer[start] == '\0') {
-        /* empty input */
-        free_all();
-        return;
+      free_all();
+      return;
     }
 
-    /* check for background execution (&) */
-    int len = mystrlen(command_buffer);
-    if (len > 0 && command_buffer[len - 1] == '&') {
+    handle_background(job, command_buffer);
+    parse_pipeline(job, command_buffer, start);
+}
+
+
+/* ---
+Function Name: trim_newline
+Purpose:
+    Removes trailing newline from buffer if present
+Input:
+    buffer - input buffer
+    bytes_read - number of bytes read
+Output:
+    Modifies buffer in place
+--- */
+static void trim_newline(char *buffer, int bytes_read)
+{
+    if (bytes_read <= 0) return;
+    if (buffer[bytes_read - 1] == '\n')
+        buffer[bytes_read - 1] = '\0';
+    else
+        buffer[bytes_read] = '\0';
+}
+
+/* ---
+Function Name: skip_leading_whitespace
+Purpose:
+    Returns the index of the first non-whitespace character
+Input:
+    buffer - input string
+Output:
+    index of first non-space/tab character
+--- */
+static int skip_leading_whitespace(char *buffer)
+{
+    int i = 0;
+    while (buffer[i] == ' ' || buffer[i] == '\t')
+        i++;
+    return i;
+}
+
+/* ---
+Function Name: handle_background
+Purpose:
+    Detects trailing '&' and sets the Job's background flag
+Input:
+    job - pointer to Job structure
+    buffer - command buffer
+Output:
+    Modifies job and buffer in place
+--- */
+static void handle_background(Job *job, char *buffer)
+{
+    int len = mystrlen(buffer);
+    if (len > 0 && buffer[len - 1] == '&') {
         job->background = 1;
-        command_buffer[len - 1] = '\0';
+        buffer[len - 1] = '\0';
     }
+}
 
-    /* parse pipeline stages separated by '|' */
+/* ---
+Function Name: parse_pipeline
+Purpose:
+    Splits command buffer into pipeline stages separated by '|'
+    and calls parse_stage for each stage
+Input:
+    job - pointer to Job structure
+    buffer - command buffer
+    start - starting index of first stage
+Output:
+    Populates job->pipeline and job->num_stages
+--- */
+static void parse_pipeline(Job *job, char *buffer, int start)
+{
     int stage_start = start;
     for (int i = start;; i++) {
-        char c = command_buffer[i];
-
+        char c = buffer[i];
         if (c == '|' || c == '\0') {
-            command_buffer[i] = '\0';
+            buffer[i] = '\0';
 
-            /* skip leading whitespace in this stage */
-            while (command_buffer[stage_start] == ' ' || command_buffer[stage_start] == '\t')
+            /* skip leading whitespace for this stage */
+            while (buffer[stage_start] == ' ' || buffer[stage_start] == '\t')
                 stage_start++;
 
-            if (command_buffer[stage_start] != '\0') {
+            if (buffer[stage_start] != '\0') {
                 parse_stage(&job->pipeline[job->num_stages],
-                            &command_buffer[stage_start],
+                            &buffer[stage_start],
                             job);
                 job->num_stages++;
             }
 
-            if (c == '\0')
-                break;
-
+            if (c == '\0') break;
             stage_start = i + 1;
         }
     }
 }
-
 
 /* ---
 Function Name: parse_stage
@@ -177,7 +228,15 @@ void set_job(Job *job)
 
 }
 
-
+/* --- 
+Function Name: check_read_status
+Purpose: 
+    Checks bytes_read and prints error if negative or exceeds MAX_ARGS
+Input:
+    bytes_read - result of read()
+Output:
+    Returns 0 if OK, -1 if error
+--- */
 int check_read_status(int bytes_read)
 {
   int exit_status = 0;
