@@ -8,7 +8,6 @@
 #include <sys/wait.h>  /* waitpid */
 #include <sys/stat.h>  /* stat */
 #include <fcntl.h>     /* open, creat */
-#include <signal.h>    /* SIGINT, SIGTSTP */
 
 /* ---
 Function Name: run_job
@@ -22,16 +21,16 @@ Output:
 --- */
 void run_job(Job *job, char *envp[])
 {
+    if (!job || job->num_stages == 0) return;
+
     int pipefd[MAX_PIPELINE_LEN - 1][2];
     int pids[MAX_PIPELINE_LEN];
 
-    if (!job || job->num_stages == 0) return;
-
-    /* Track foreground/background job */
     fg_job_running = !job->background;
 
     create_pipes(pipefd, job->num_stages);
 
+    /* Fork all stages */
     for (int i = 0; i < job->num_stages; i++) {
         pids[i] = fork_and_execute_stage(i, job, envp, pipefd);
         if (pids[i] < 0) {
@@ -41,12 +40,13 @@ void run_job(Job *job, char *envp[])
         }
     }
 
-    /* Close all pipes in parent */
+    /* Parent closes all pipe ends */
     for (int i = 0; i < job->num_stages - 1; i++) {
         close(pipefd[i][0]);
         close(pipefd[i][1]);
     }
 
+    /* Foreground vs background handling */
     if (job->background) {
         print_background_pid(job, pids[0]);
         fg_job_running = 0;
@@ -54,11 +54,10 @@ void run_job(Job *job, char *envp[])
         int status;
         for (int i = 0; i < job->num_stages; i++) {
             waitpid(pids[i], &status, 0);
-            /* Reset fg_job_running if process was interrupted */
             if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
                 break;
         }
-        fg_job_running = 0;  // foreground job finished
+        fg_job_running = 0;
     }
 
     free_all();
@@ -163,9 +162,6 @@ char *resolve_command_path(const char *cmd, char *envp[])
     return NULL;
 }
 
-
-
-
 /* ---
 Function Name: create_pipes
 Purpose:
@@ -201,24 +197,14 @@ static void setup_redirection(int stage_index, int num_stages, Job *job,
 {
     if (stage_index == 0 && job->infile_path) {
         int fd = open(job->infile_path, O_RDONLY);
-        if (fd < 0) {
-            write(STDERR_FILENO, job->infile_path, mystrlen(job->infile_path));
-            write(STDERR_FILENO, error_messages[ERR_FILE_NOT_FOUND],
-                  mystrlen(error_messages[ERR_FILE_NOT_FOUND]));
-            _exit(1);
-        }
+        if (fd < 0) { _exit(1); }
         dup2(fd, STDIN_FILENO);
         close(fd);
     }
 
     if (stage_index == num_stages - 1 && job->outfile_path) {
         int fd = creat(job->outfile_path, 0644);
-        if (fd < 0) {
-            write(STDERR_FILENO, job->outfile_path, mystrlen(job->outfile_path));
-            write(STDERR_FILENO, error_messages[ERR_FILE_NOT_FOUND],
-                  mystrlen(error_messages[ERR_FILE_NOT_FOUND]));
-            _exit(1);
-        }
+        if (fd < 0) { _exit(1); }
         dup2(fd, STDOUT_FILENO);
         close(fd);
     }
@@ -228,9 +214,10 @@ static void setup_redirection(int stage_index, int num_stages, Job *job,
     if (stage_index < num_stages - 1)
         dup2(pipefd[stage_index][1], STDOUT_FILENO);
 
+    // Close only unused pipe ends
     for (int i = 0; i < num_stages - 1; i++) {
-        close(pipefd[i][0]);
-        close(pipefd[i][1]);
+        if (i != stage_index - 1) close(pipefd[i][0]);
+        if (i != stage_index)     close(pipefd[i][1]);
     }
 }
 
@@ -249,11 +236,7 @@ Output:
 static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
                                   int pipefd[MAX_PIPELINE_LEN - 1][2])
 {
-    if (job->pipeline[stage_index].argc == 0 ||
-        job->pipeline[stage_index].argv[0] == NULL ||
-        job->pipeline[stage_index].argv[0][0] == '\0') {
-        return -1;
-    }
+    if (!job->pipeline[stage_index].argv[0]) return -1;
 
     int pid = fork();
     if (pid < 0) {
@@ -261,18 +244,16 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
         return -1;
     }
 
-    if (pid == 0) { // CHILD PROCESS
-     
+    if (pid == 0) { /* CHILD */
+        /* Reset signal handlers in child */
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
-        
         setup_redirection(stage_index, job->num_stages, job, pipefd);
 
-        // Resolve full path of command
+        /* Resolve command path */
         char *fullpath = resolve_command_path(job->pipeline[stage_index].argv[0], envp);
         if (!fullpath) {
-            // Print "command not found" including the command
             write(STDERR_FILENO, job->pipeline[stage_index].argv[0],
                   mystrlen(job->pipeline[stage_index].argv[0]));
             write(STDERR_FILENO, error_messages[ERR_CMD_NOT_FOUND],
@@ -281,21 +262,14 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
         }
 
         execve(fullpath, job->pipeline[stage_index].argv, envp);
-
-        // Only print execution error if fg_job_running is 0 (not interrupted by Ctrl+C)
-        if (fg_job_running) {
-            _exit(1);
-        } else {
-            print_error(ERR_EXEC_FAIL);
-            _exit(1);
-        }
+        /* execve failed */
+        write(STDERR_FILENO, error_messages[ERR_EXEC_FAIL],
+              mystrlen(error_messages[ERR_EXEC_FAIL]));
+        _exit(1);
     }
 
     return pid;
 }
-
-
-
 
 /* ---
 Function Name: print_background_pid

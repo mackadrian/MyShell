@@ -7,19 +7,29 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 
 // FUNCTION DECLARATIONS
 void print_job(Job *job);
 void set_test_job(Job *job);
+void build_cmdline(Job *job, char *cmdline, size_t size);
 
 void test_normal_command(char *envp[]);
 void test_pipeline_command(char *envp[]);
 void test_background_command(char *envp[]);
 void test_redirection_command(char *envp[]);
-
 void test_invalid_command(char *envp[]);
 void test_missing_file_command(char *envp[]);
 void test_sigint_handling(char *envp[]);
+
+void prepare_input_file(const char *filename);
+void check_output_file(const char *filename);
+void test_cat_input_redirection(char *envp[]);
+void test_sort_pipe_uniq_with_redirection(char *envp[]);
+void test_output_redirection_only(char *envp[]);
+void test_combined_redirection_and_pipeline(char *envp[]);
+void test_cat_frankenstein(char *envp[]);
 
 // MAIN
 int main(int argc, char *argv[], char *envp[])
@@ -28,7 +38,14 @@ int main(int argc, char *argv[], char *envp[])
     test_normal_command(envp);
     test_pipeline_command(envp);
     test_background_command(envp);
+
+    printf("\n=== Redirection Tests ===\n");
     test_redirection_command(envp);
+    test_cat_input_redirection(envp);
+    test_sort_pipe_uniq_with_redirection(envp);
+    test_output_redirection_only(envp);
+    test_combined_redirection_and_pipeline(envp);
+    test_cat_frankenstein(envp);
 
     printf("\n=== Error Handling Tests ===\n");
     test_invalid_command(envp);
@@ -37,12 +54,10 @@ int main(int argc, char *argv[], char *envp[])
     printf("\n=== Signal Handling Tests ===\n");
     test_sigint_handling(envp);
 
-    
     return 0;
 }
 
 // FUNCTION DEFINITIONS
-
 void print_job(Job *job)
 {
     printf("Number of stages: %d\n", job->num_stages);
@@ -256,4 +271,134 @@ void test_sigint_handling(char *envp[])
     }
 
     printf("-------------------------------------------------\n");
+}
+
+void prepare_input_file(const char *filename) {
+    FILE *f = fopen(filename, "w");
+    if (!f) return;
+    fprintf(f, "apple\nbanana\napple\ncherry\nbanana\n");
+    fclose(f);
+}
+
+void check_output_file(const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        printf("Output file %s not found\n", filename);
+        return;
+    }
+ 
+    printf("Contents of %s:\n", filename);
+    char line[128];
+    while (fgets(line, sizeof(line), f)) {
+        printf("%s", line);
+    }
+    fclose(f);
+    printf("-------------------------------------------------\n");
+}
+
+void test_cat_input_redirection(char *envp[]) {
+    printf("=== Test: cat < input.txt ===\n");
+    prepare_input_file("input.txt");
+
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.infile_path = "input.txt";
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "cat";
+    job.pipeline[0].argv[1] = NULL;
+
+    run_job(&job, envp);
+    printf("Expected output: contents of input.txt\n");
+    printf("-------------------------------------------------\n");
+}
+
+void test_sort_pipe_uniq_with_redirection(char *envp[]) {
+    printf("=== Test: sort < input.txt | uniq > output.txt ===\n");
+    prepare_input_file("input.txt");
+
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 2;
+    job.infile_path = "input.txt";
+    job.outfile_path = "output.txt";
+
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "sort";
+    job.pipeline[0].argv[1] = NULL;
+
+    job.pipeline[1].argc = 1;
+    job.pipeline[1].argv[0] = "uniq";
+    job.pipeline[1].argv[1] = NULL;
+
+    run_job(&job, envp);
+    check_output_file("output.txt");
+}
+
+void test_output_redirection_only(char *envp[]) {
+    printf("=== Test: echo hello world > output.txt ===\n");
+
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.outfile_path = "output.txt";
+
+    job.pipeline[0].argc = 3;
+    job.pipeline[0].argv[0] = "echo";
+    job.pipeline[0].argv[1] = "hello";
+    job.pipeline[0].argv[2] = "world";
+    job.pipeline[0].argv[3] = NULL;
+
+    run_job(&job, envp);
+    check_output_file("output.txt");
+}
+
+void test_combined_redirection_and_pipeline(char *envp[]) {
+    printf("=== Test: cat < input.txt | grep a | sort > output.txt ===\n");
+    prepare_input_file("input.txt");
+
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 3;
+    job.infile_path = "input.txt";
+    job.outfile_path = "output.txt";
+
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "cat";
+    job.pipeline[0].argv[1] = NULL;
+
+    job.pipeline[1].argc = 2;
+    job.pipeline[1].argv[0] = "grep";
+    job.pipeline[1].argv[1] = "a";
+    job.pipeline[1].argv[2] = NULL;
+
+    job.pipeline[2].argc = 1;
+    job.pipeline[2].argv[0] = "sort";
+    job.pipeline[2].argv[1] = NULL;
+
+    run_job(&job, envp);
+    check_output_file("output.txt");
+}
+
+void test_cat_frankenstein(char *envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "cat";
+    job.pipeline[0].argv[1] = NULL;
+
+    job.infile_path = "frankenstein.txt";
+
+    printf("=== Test: cat < frankenstein.txt ===\n");
+    print_job(&job);
+
+    run_job(&job, envp);
+    printf("=== End of test ===\n\n");
 }
