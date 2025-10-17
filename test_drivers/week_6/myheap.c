@@ -1,8 +1,5 @@
 #include "myheap.h"
 
-
-#define HEAP_SIZE 10000     /* adjust as necessary */
-
 static char heap[HEAP_SIZE];
 static char *freep = heap;
 
