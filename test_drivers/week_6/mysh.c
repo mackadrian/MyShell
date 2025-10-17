@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+int fg_job_status = 0;
+
 /* ---
 Function Name: main
 
@@ -39,12 +41,35 @@ int main(int argc, char *argv[], char *envp[])
             continue;
         }
 
-        if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
-            exitShell = 1;
-            break;
-        }
+	char **argv0 = job.pipeline[0].argv;
+	char *cmd = argv0[0];
+
+	if (!cmd) {
+	  get_job(&job);
+	  continue;
+	}
+
+	expand_variables(argv0);
+
+        if (mystrcmp(cmd, "exit") == 0) {
+	  handle_exit(argv0);
+	  continue;
+        } else if (mystrcmp(cmd, "cd") == 0) {
+	  handle_cd(argv0);
+	  get_job(&job);
+	  continue;
+	} else if (mystrcmp(cmd, "export") == 0) {
+	  handle_export(argv0);
+	  get_job(&job);
+	  continue;
+	}	  
 
         run_job(&job, envp);
+
+	if (!job.background) {
+	  last_exit_status = fg_job_status;
+	}
+	
         free_all();
         get_job(&job);
     }

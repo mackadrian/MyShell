@@ -11,6 +11,8 @@
 #define STD_OUT 1
 #define STD_ERR 2
 
+extern int fg_job_status;
+
 static void remove_zombies();
 static void initialize_signal_handler();
 #endif

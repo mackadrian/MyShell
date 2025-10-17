@@ -1,6 +1,6 @@
 #include "builtin.h"
 #include "mystring.h"
-#include "myheap.c"
+#include "myheap.h"
 #include <unistd.h>
 #include <stdlib.h> // only for getenv if allowed
 
