@@ -4,6 +4,20 @@
 #include "jobs.h"
 #include "mysh.h"
 
+#define SPACE_CHAR              ' '
+#define TAB_CHAR                '\t'
+#define NEWLINE_CHAR            '\n'
+#define PIPE_CHAR               '|'
+#define BACKGROUND_CHAR         '&'
+#define INPUT_REDIRECT_CHAR     '<'
+#define OUTPUT_REDIRECT_CHAR    '>'
+#define NULL_CHAR               '\0'
+
+#define ZERO_VALUE              0
+#define TRUE_VALUE              1
+#define ERROR_CODE              -1
+#define READ_BYTE_COUNT         1
+
 void get_job(Job *job);
 void set_job(Job *job);
 int check_read_status(int bytes_read);
