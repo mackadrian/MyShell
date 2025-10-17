@@ -28,18 +28,17 @@ Output:
 void get_job(Job *job)
 {
     set_job(job);
-
     write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
 
     char *command_buffer = alloc(MAX_ARGS);
     if (!command_buffer) return;
 
     int bytes_read = read_line_from_stdin(command_buffer, MAX_ARGS);
-    if (bytes_read <= 0) return;
+    if (bytes_read <= ZERO_VALUE) return;
 
     normalize_newlines(command_buffer);
     int start = skip_leading_whitespace(command_buffer);
-    if (command_buffer[start] == '\0') return;
+    if (command_buffer[start] == NULL_CHAR) return;
 
     handle_background(job, command_buffer);
     parse_pipeline(job, command_buffer, start);
@@ -57,9 +56,9 @@ Output:
 --- */
 static void normalize_newlines(char *buffer)
 {
-    for (int i = 0; buffer[i] != '\0'; i++) {
-        if (buffer[i] == '\n')
-            buffer[i] = ' ';
+    for (int i = ZERO_VALUE; buffer[i] != NULL_CHAR; i++) {
+        if (buffer[i] == NEWLINE_CHAR)
+            buffer[i] = SPACE_CHAR;
     }
 }
 
@@ -76,9 +75,11 @@ Output:
 --- */
 static void trim_newline(char *buffer, int bytes_read)
 {
-    if (bytes_read <= 0) return;
-    if (buffer[bytes_read - 1] == '\n') buffer[bytes_read - 1] = '\0';
-    else buffer[bytes_read] = '\0';
+    if (bytes_read <= ZERO_VALUE) return;
+    if (buffer[bytes_read - TRUE_VALUE] == NEWLINE_CHAR)
+        buffer[bytes_read - TRUE_VALUE] = NULL_CHAR;
+    else
+        buffer[bytes_read] = NULL_CHAR;
 }
 
 /* ---
@@ -92,8 +93,8 @@ Output:
 --- */
 static int skip_leading_whitespace(char *buffer)
 {
-    int i = 0;
-    while (buffer[i] == ' ' || buffer[i] == '\t') i++;
+    int i = ZERO_VALUE;
+    while (buffer[i] == SPACE_CHAR || buffer[i] == TAB_CHAR) i++;
     return i;
 }
 
@@ -110,9 +111,9 @@ Output:
 static void handle_background(Job *job, char *buffer)
 {
     int len = mystrlen(buffer);
-    if (len > 0 && buffer[len - 1] == '&') {
-        job->background = 1;
-        buffer[len - 1] = '\0';
+    if (len > ZERO_VALUE && buffer[len - TRUE_VALUE] == BACKGROUND_CHAR) {
+        job->background = TRUE_VALUE;
+        buffer[len - TRUE_VALUE] = NULL_CHAR;
     }
 }
 
@@ -136,20 +137,21 @@ static void parse_pipeline(Job *job, char *buffer, int start)
     for (int i = start;; i++) {
         char c = buffer[i];
 
-        if (c == '|' || c == '\0') {
-            buffer[i] = '\0';
+        if (c == PIPE_CHAR || c == NULL_CHAR) {
+            buffer[i] = NULL_CHAR;
 
-            while (buffer[stage_start] == ' ' || buffer[stage_start] == '\t' || buffer[stage_start] == '\n')
+            while (buffer[stage_start] == SPACE_CHAR ||
+                   buffer[stage_start] == TAB_CHAR ||
+                   buffer[stage_start] == NEWLINE_CHAR)
                 stage_start++;
 
-            if (buffer[stage_start] != '\0') {
+            if (buffer[stage_start] != NULL_CHAR) {
                 parse_stage(&job->pipeline[job->num_stages], &buffer[stage_start], job);
                 job->num_stages++;
             }
 
-            if (c == '\0') break;
-
-            stage_start = i + 1;
+            if (c == NULL_CHAR) break;
+            stage_start = i + TRUE_VALUE;
         }
     }
 }
@@ -170,31 +172,30 @@ Output:
 --- */
 void parse_stage(Command *cmd, char *stage_str, Job *job)
 {
-    cmd->argc = 0;
-    int i = 0;
+    cmd->argc = ZERO_VALUE;
+    int i = ZERO_VALUE;
 
-    while (stage_str[i] != '\0') {
-        while (stage_str[i] == ' ' || stage_str[i] == '\t') i++;
-        if (stage_str[i] == '\0') break;
+    while (stage_str[i] != NULL_CHAR) {
+        while (stage_str[i] == SPACE_CHAR || stage_str[i] == TAB_CHAR) i++;
+        if (stage_str[i] == NULL_CHAR) break;
 
         int start = i;
-        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0') i++;
+        while (stage_str[i] != SPACE_CHAR && stage_str[i] != TAB_CHAR && stage_str[i] != NULL_CHAR) i++;
 
-        /* Copy token to heap */
         int tok_len = i - start;
-        char *token = alloc(tok_len + 1);
-        for (int j = 0; j < tok_len; j++) token[j] = stage_str[start + j];
-        token[tok_len] = '\0';
+        char *token = alloc(tok_len + TRUE_VALUE);
+        for (int j = ZERO_VALUE; j < tok_len; j++) token[j] = stage_str[start + j];
+        token[tok_len] = NULL_CHAR;
 
-        if (mystrcmp(token, "<") == 0) {
+        if (mystrcmp(token, "<") == ZERO_VALUE) {
             parse_input_redirection(job, stage_str, &i);
-        } else if (mystrcmp(token, ">") == 0) {
+        } else if (mystrcmp(token, ">") == ZERO_VALUE) {
             parse_output_redirection(job, stage_str, &i);
         } else {
             parse_argument(cmd, token);
         }
 
-        if (stage_str[i] != '\0') i++;
+        if (stage_str[i] != NULL_CHAR) i++;
     }
 
     cmd->argv[cmd->argc] = NULL;
@@ -229,16 +230,16 @@ Output:
 --- */
 static void parse_input_redirection(Job *job, char *stage_str, int *i)
 {
-    while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
+    while (stage_str[*i] == SPACE_CHAR || stage_str[*i] == TAB_CHAR) (*i)++;
     int start = *i;
-    while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
+    while (stage_str[*i] != SPACE_CHAR && stage_str[*i] != TAB_CHAR && stage_str[*i] != NULL_CHAR) (*i)++;
     int len = *i - start;
-    char *path = alloc(len + 1);
-    for (int j = 0; j < len; j++) path[j] = stage_str[start + j];
-    path[len] = '\0';
+    char *path = alloc(len + TRUE_VALUE);
+    for (int j = ZERO_VALUE; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = NULL_CHAR;
     job->infile_path = path;
 
-    if (stage_str[*i] != '\0') (*i)++;
+    if (stage_str[*i] != NULL_CHAR) (*i)++;
 }
 
 /* ---
@@ -254,16 +255,16 @@ Output:
 --- */
 static void parse_output_redirection(Job *job, char *stage_str, int *i)
 {
-    while (stage_str[*i] == ' ' || stage_str[*i] == '\t') (*i)++;
+    while (stage_str[*i] == SPACE_CHAR || stage_str[*i] == TAB_CHAR) (*i)++;
     int start = *i;
-    while (stage_str[*i] != ' ' && stage_str[*i] != '\t' && stage_str[*i] != '\0') (*i)++;
+    while (stage_str[*i] != SPACE_CHAR && stage_str[*i] != TAB_CHAR && stage_str[*i] != NULL_CHAR) (*i)++;
     int len = *i - start;
-    char *path = alloc(len + 1);
-    for (int j = 0; j < len; j++) path[j] = stage_str[start + j];
-    path[len] = '\0';
+    char *path = alloc(len + TRUE_VALUE);
+    for (int j = ZERO_VALUE; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = NULL_CHAR;
     job->outfile_path = path;
 
-    if (stage_str[*i] != '\0') (*i)++;
+    if (stage_str[*i] != NULL_CHAR) (*i)++;
 }
 
 
@@ -278,11 +279,10 @@ Output:
 --- */
 void set_job(Job *job)
 {
-    job->num_stages = 0;
-    job->background = 0;
+    job->num_stages = ZERO_VALUE;
+    job->background = ZERO_VALUE;
     job->infile_path = NULL;
     job->outfile_path = NULL;
-
 }
 
 /* --- 
@@ -296,20 +296,19 @@ Output:
 --- */
 int check_read_status(int bytes_read)
 {
-    int exit_status = 0;
+    int exit_status = ZERO_VALUE;
 
-    if (bytes_read < 0) {
-        exit_status = -1;
+    if (bytes_read < ZERO_VALUE) {
+        exit_status = ERROR_CODE;
     } else if (bytes_read > MAX_ARGS) {
         print_error(ERR_ARG_EXCD);
-        exit_status = -1;
-    } else if (bytes_read > 0) {
+        exit_status = ERROR_CODE;
+    } else if (bytes_read > ZERO_VALUE) {
         free_all();
     }
 
     return exit_status;
 }
-
 /* ---
 Function Name: read_line_from_stdin
 Purpose:
@@ -323,23 +322,23 @@ Output:
 --- */
 static int read_line_from_stdin(char *buffer, int maxlen)
 {
-    int total = 0;
+    int total = ZERO_VALUE;
     char c;
 
-    while (total < maxlen - 1) {
-        int n = read(STDIN_FILENO, &c, 1);
+    while (total < maxlen - TRUE_VALUE) {
+        int n = read(STDIN_FILENO, &c, READ_BYTE_COUNT);
 
-        if (n == 0) {
+        if (n == ZERO_VALUE) {
             break;
-        } else if (n < 0) {
-            return -1;
-        } else if (c == '\n') {
+        } else if (n < ZERO_VALUE) {
+            return ERROR_CODE;
+        } else if (c == NEWLINE_CHAR) {
             break;
         }
 
         buffer[total++] = c;
     }
 
-    buffer[total] = '\0';
+    buffer[total] = NULL_CHAR;
     return total;
 }
