@@ -55,6 +55,13 @@ void run_job(Job *job, char *envp[])
         int status;
         for (int i = 0; i < job->num_stages; i++) {
             waitpid(pids[i], &status, 0);
+	    if (i == job->num_stages -1) {
+	      if (WIFEXITED(status))
+		fg_job_status = WEXITSTATUS(status);
+	      else
+		fg_job_status = 1;
+	    }
+	    
             if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
                 break;
         }
@@ -241,6 +248,7 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
     }
 
     if (pid == 0) { /* CHILD */
+      setpgid(0,0);
         /* Reset signal handlers in child */
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);

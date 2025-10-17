@@ -1,53 +1,53 @@
-CC = gcc
-CFLAGS = -c
-
 # ----------------------
 # Main shell target
 # ----------------------
-mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o
-	$(CC) mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o -o mysh
+mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o builtin.o
+	gcc mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o builtin.o -o mysh
 
 # ----------------------
 # Test driver for get_job
 # ----------------------
 test_getjob: test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o
-	$(CC) test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o -o test_getjob
+	gcc test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o -o test_getjob
 
 test_runjob: test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o
-	$(CC) test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o -o test_runjob
+	gcc test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o -o test_runjob
 
 # ----------------------
 # Object files
 # ----------------------
 mysh.o: mysh.c mysh.h mystring.h jobs.h myheap.h signal.h
-	$(CC) $(CFLAGS) mysh.c
+	gcc -c mysh.c
 
 mystring.o: mystring.c mystring.h
-	$(CC) $(CFLAGS) mystring.c
+	gcc -c mystring.c
 
 myheap.o: myheap.c myheap.h
-	$(CC) $(CFLAGS) myheap.c
+	gcc -c myheap.c
 
 runjob.o: runjob.c jobs.h runjob.h errors.h
-	$(CC) $(CFLAGS) runjob.c
+	gcc -c runjob.c
 
 getjob.o: getjob.c jobs.h getjob.h errors.h signal.h
-	$(CC) $(CFLAGS) getjob.c
+	gcc -c getjob.c
 
 errors.o: errors.c errors.h
-	$(CC) $(CFLAGS) errors.c
+	gcc -c errors.c
 
 signal.o: signal.c signal.h
-	$(CC) $(CFLAGS) signal.c
+	gcc -c signal.c
+
+builtin.o: builtin.c builtin.h
+	gcc -c builtin.c
 
 # ----------------------
 # Test driver object
 # ----------------------
 test_getjob.o: test_getjob.c jobs.h getjob.h mystring.h myheap.h errors.h
-	$(CC) $(CFLAGS) test_getjob.c
+	gcc -c test_getjob.c
 
 test_runjob.o: test_runjob.c jobs.h runjob.h mystring.h myheap.h errors.h
-	$(CC) $(CFLAGS) test_runjob.c
+	gcc -c test_runjob.c
 
 # ----------------------
 # Clean

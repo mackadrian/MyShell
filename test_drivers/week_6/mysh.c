@@ -5,9 +5,12 @@
 #include "runjob.h"  
 #include "signal.h"
 #include "mysh.h"
+#include "builtin.h"
 
 #include <stdlib.h>
 #include <unistd.h>
+
+int fg_job_status = 0;
 
 /* ---
 Function Name: main
@@ -32,15 +35,41 @@ int main(int argc, char *argv[], char *envp[])
 
     while (!exitShell) {
         remove_zombies();
+	
         /* ignore empty input */
         if (job.num_stages == 0) {
             get_job(&job);
             continue;
         }
 
-        if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
-            exitShell = 1;
-            break;
+	expand_variables(job.pipeline[0].argv);
+
+	if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
+            int status = 0;
+            if (job.pipeline[0].argv[1])
+                status = myatoi(job.pipeline[0].argv[1]);
+            free_all();
+            _exit(status);
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "cd") == 0) {
+            handle_cd(job.pipeline[0].argv);
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "export") == 0) {
+            handle_export(job.pipeline[0].argv);
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "fg") == 0) {
+            builtin_fg(0);  // for simplicity, pick first job
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "bg") == 0) {
+            builtin_bg(0);  // for simplicity, pick first job
+            get_job(&job);
+            continue;
         }
 
         run_job(&job, envp);
@@ -69,8 +98,13 @@ Output:
 static void remove_zombies()
 {
   int status;
-  while (waitpid(-1, &status, WNOHANG) > 0)
-    {}
+  while (waitpid(-1, &status, WNOHANG) > 0) {}
+}
+
+static void sigchld_handler(int sig) {
+  int status;
+  int pid;
+  while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {}
 }
 
 /* ---
