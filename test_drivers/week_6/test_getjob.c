@@ -8,15 +8,15 @@
 #include <string.h>
 
 // FUNCTION DECLARATIONS
-void print_job(Job *job);
-void test_normal_command();
-void test_pipeline_command();
-void test_background_command();
-void test_redirection_command();
-void test_bytes_read_negative();
-void test_bytes_read_zero();
-void test_bytes_read_overflow();
-void test_get_job_from_stdin();
+static void print_job(Job *job);
+static void test_normal_command();
+static void test_pipeline_command();
+static void test_background_command();
+static void test_redirection_command();
+static void test_bytes_read_negative();
+static void test_bytes_read_zero();
+static void test_bytes_read_overflow();
+static void test_get_job_from_stdin();
 
 // MAIN
 int main(void)
@@ -47,7 +47,7 @@ Input:
 Output:
     Prints the parsed job to stdout
 --- */
-void print_job(Job *job)
+static void print_job(Job *job)
 {
     printf("Number of stages: %d\n", job->num_stages);
     printf("Background flag: %d\n", job->background);
@@ -69,7 +69,7 @@ Function Name: test_normal_command
 Purpose:
     Tests a simple single-stage command
 --- */
-void test_normal_command()
+static void test_normal_command()
 {
     Job job;
     char command[] = "ls -l";
@@ -87,7 +87,7 @@ Function Name: test_pipeline_command
 Purpose:
     Tests a multi-stage pipeline command
 --- */
-void test_pipeline_command()
+static void test_pipeline_command()
 {
     Job job;
     char stage1[] = "cat file.txt";
@@ -108,7 +108,7 @@ Function Name: test_background_command
 Purpose:
     Tests a command with background execution
 --- */
-void test_background_command()
+static void test_background_command()
 {
     Job job;
     char command[] = "echo hello world &";
@@ -133,7 +133,7 @@ Function Name: test_redirection_command
 Purpose:
     Tests input and output redirection
 --- */
-void test_redirection_command()
+static void test_redirection_command()
 {
     Job job;
     char stage1[] = "sort < unsorted.txt";
@@ -152,7 +152,7 @@ Function Name: test_bytes_read_negative
 Purpose:
     Simulates bytes_read < 0 (read error)
 --- */
-void test_bytes_read_negative()
+static void test_bytes_read_negative()
 {
     printf("Test: bytes_read < 0\n");
     int status = check_read_status(-1);
@@ -165,7 +165,7 @@ Function Name: test_bytes_read_zero
 Purpose:
     Simulates bytes_read == 0 (EOF)
 --- */
-void test_bytes_read_zero()
+static void test_bytes_read_zero()
 {
     printf("Test: bytes_read == 0\n");
     int status = check_read_status(0);
@@ -178,7 +178,7 @@ Function Name: test_bytes_read_overflow
 Purpose:
     Simulates bytes_read > MAX_ARGS
 --- */
-void test_bytes_read_overflow()
+static void test_bytes_read_overflow()
 {
     printf("Test: bytes_read > MAX_ARGS\n");
     int status = check_read_status(MAX_ARGS + 100);
@@ -191,7 +191,7 @@ Function Name: test_get_job_from_stdin
 Purpose:
     Tests get_job() with actual stdin input (can feed file via < or pipe)
 --- */
-void test_get_job_from_stdin()
+static void test_get_job_from_stdin()
 {
     Job job;
     set_job(&job);

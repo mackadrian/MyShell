@@ -11,25 +11,25 @@
 #include <sys/wait.h>
 
 // FUNCTION DECLARATIONS
-void print_job(Job *job);
-void set_test_job(Job *job);
-void build_cmdline(Job *job, char *cmdline, size_t size);
+static void print_job(Job *job);
+static void set_test_job(Job *job);
+static void build_cmdline(Job *job, char *cmdline, size_t size);
 
-void test_normal_command(char *envp[]);
-void test_pipeline_command(char *envp[]);
-void test_background_command(char *envp[]);
-void test_redirection_command(char *envp[]);
-void test_invalid_command(char *envp[]);
-void test_missing_file_command(char *envp[]);
-void test_sigint_handling(char *envp[]);
+static void test_normal_command(char *envp[]);
+static void test_pipeline_command(char *envp[]);
+static void test_background_command(char *envp[]);
+static void test_redirection_command(char *envp[]);
+static void test_invalid_command(char *envp[]);
+static void test_missing_file_command(char *envp[]);
+static void test_sigint_handling(char *envp[]);
 
-void prepare_input_file(const char *filename);
-void check_output_file(const char *filename);
-void test_cat_input_redirection(char *envp[]);
-void test_sort_pipe_uniq_with_redirection(char *envp[]);
-void test_output_redirection_only(char *envp[]);
-void test_combined_redirection_and_pipeline(char *envp[]);
-void test_cat_frankenstein(char *envp[]);
+static void prepare_input_file(const char *filename);
+static void check_output_file(const char *filename);
+static void test_cat_input_redirection(char *envp[]);
+static void test_sort_pipe_uniq_with_redirection(char *envp[]);
+static void test_output_redirection_only(char *envp[]);
+static void test_combined_redirection_and_pipeline(char *envp[]);
+static void test_cat_frankenstein(char *envp[]);
 
 // MAIN
 int main(int argc, char *argv[], char *envp[])
@@ -58,7 +58,19 @@ int main(int argc, char *argv[], char *envp[])
 }
 
 // FUNCTION DEFINITIONS
-void print_job(Job *job)
+/* ---
+Function Name: print_job
+Purpose:
+    Displays the details of a Job structure for debugging and verification.
+    Prints all stages, their arguments, and any input/output redirection
+    associated with the job.
+Input:
+    job - pointer to a Job structure containing pipeline and redirection data
+Output:
+    Prints the job configuration (number of stages, background flag,
+    redirection paths, and command arguments) to stdout.
+--- */
+static void print_job(Job *job)
 {
     printf("Number of stages: %d\n", job->num_stages);
     printf("Background flag: %d\n", job->background);
@@ -75,7 +87,19 @@ void print_job(Job *job)
     printf("-------------------------------------------------\n");
 }
 
-void set_test_job(Job *job)
+/* ---
+Function Name: set_test_job
+Purpose:
+    Initializes a Job structure for testing by resetting all fields to 
+    default values. Clears previous command arguments, redirection paths,
+    and stage data to ensure a clean starting state.
+Input:
+    job - pointer to a Job structure to reset
+Output:
+    Job structure fields (num_stages, background flag, pipeline arguments,
+    redirection paths) are set to initial values.
+--- */
+static void set_test_job(Job *job)
 {
     job->num_stages = 0;
     job->background = 0;
@@ -87,7 +111,21 @@ void set_test_job(Job *job)
     }
 }
 
-void build_cmdline(Job *job, char *cmdline, size_t size)
+/* ---
+Function Name: build_cmdline
+Purpose:
+    Constructs a readable command-line string from a Job structure by 
+    concatenating all stage arguments and pipe ('|') separators. If the 
+    background flag is set, an '&' is appended to the end of the command.
+Input:
+    job     - pointer to a Job structure containing command data
+    cmdline - destination buffer for the constructed command line
+    size    - total size of the destination buffer
+Output:
+    Fills the cmdline buffer with a string representation of the job
+    (e.g., "cat file.txt | grep foo | sort &").
+--- */
+static void build_cmdline(Job *job, char *cmdline, size_t size)
 {
     cmdline[0] = '\0';
     for (int i = 0; i < job->num_stages; i++) {
@@ -101,17 +139,18 @@ void build_cmdline(Job *job, char *cmdline, size_t size)
 }
 
 /* ---
-Function Name: read_line_from_stdin
+Function Name: test_normal_command
 Purpose:
-    Reads one line from stdin (up to newline or EOF) using system calls only.
+    Tests execution of a simple, single-stage command (non-pipeline) using run_job().
+    Verifies that a standard command like 'ls -l' runs correctly without input/output
+    redirection or background execution.
 Input:
-    buffer - destination buffer
-    maxlen - maximum bytes to read (including null terminator)
+    envp - environment variable array passed to run_job()
 Output:
-    Returns number of bytes read (excluding null terminator), 
-    0 on EOF, or -1 on error.
+    Prints the constructed command line, job structure details, and the command output.
+    Expected result: directory listing from 'ls -l'.
 --- */
-void test_normal_command(char *envp[])
+static void test_normal_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -141,7 +180,7 @@ Input:
 Output:
     Verifies correct pipe setup and sequential data flow between commands.
 --- */
-void test_pipeline_command(char *envp[])
+static void test_pipeline_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -181,7 +220,7 @@ Input:
 Output:
     Prints job details and verifies job runs in background.
 --- */
-void test_background_command(char *envp[])
+static void test_background_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -211,7 +250,7 @@ Input:
 Output:
     Writes to output.txt after reading from input.txt, verifies file redirection.
 --- */
-void test_redirection_command(char *envp[])
+static void test_redirection_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -248,7 +287,7 @@ Input:
 Output:
     Expects and reports an appropriate error message.
 --- */
-void test_invalid_command(char *envp[])
+static void test_invalid_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -277,7 +316,7 @@ Input:
 Output:
     Expects file not found error and verifies graceful failure.
 --- */
-void test_missing_file_command(char *envp[])
+static void test_missing_file_command(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -307,7 +346,7 @@ Input:
 Output:
     Observes signal handling and ensures process terminates cleanly.
 --- */
-void test_sigint_handling(char *envp[])
+static void test_sigint_handling(char *envp[])
 {
     Job job;
     set_test_job(&job);
@@ -337,7 +376,7 @@ Input:
 Output:
     Writes several lines of test text (e.g., fruit names) to the specified file.
 --- */
-void prepare_input_file(const char *filename) {
+static void prepare_input_file(const char *filename) {
     FILE *f = fopen(filename, "w");
     if (!f) return;
     fprintf(f, "apple\nbanana\napple\ncherry\nbanana\n");
@@ -353,7 +392,7 @@ Input:
 Output:
     Prints file contents to stdout; reports if file cannot be found.
 --- */
-void check_output_file(const char *filename) {
+static void check_output_file(const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) {
         printf("Output file %s not found\n", filename);
@@ -378,7 +417,7 @@ Input:
 Output:
     Reads and prints contents of input.txt, verifying input redirection.
 --- */
-void test_cat_input_redirection(char *envp[]) {
+static void test_cat_input_redirection(char *envp[]) {
     printf("=== Test: cat < input.txt ===\n");
     prepare_input_file("input.txt");
 
@@ -406,7 +445,7 @@ Input:
 Output:
     Creates sorted, unique lines in output.txt for verification.
 --- */
-void test_sort_pipe_uniq_with_redirection(char *envp[]) {
+static void test_sort_pipe_uniq_with_redirection(char *envp[]) {
     printf("=== Test: sort < input.txt | uniq > output.txt ===\n");
     prepare_input_file("input.txt");
 
@@ -438,7 +477,7 @@ Input:
 Output:
     Writes “hello world” to output.txt and verifies correctness.
 --- */
-void test_output_redirection_only(char *envp[]) {
+static void test_output_redirection_only(char *envp[]) {
     printf("=== Test: echo hello world > output.txt ===\n");
 
     Job job;
@@ -466,7 +505,7 @@ Input:
 Output:
     Produces filtered and sorted output written to output.txt.
 --- */
-void test_combined_redirection_and_pipeline(char *envp[]) {
+static void test_combined_redirection_and_pipeline(char *envp[]) {
     printf("=== Test: cat < input.txt | grep a | sort > output.txt ===\n");
     prepare_input_file("input.txt");
 
@@ -503,7 +542,7 @@ Input:
 Output:
     Streams file content to stdout to verify system-call based execution.
 --- */
-void test_cat_frankenstein(char *envp[])
+static void test_cat_frankenstein(char *envp[])
 {
     Job job;
     set_test_job(&job);
