@@ -42,7 +42,7 @@ int main(int argc, char *argv[], char *envp[])
             continue;
         }
 
-	expand_variables(job.pipeline[0].argv);
+	expand_variables(job.pipeline[0].argv, envp);
 
 	if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
             int status = 0;
@@ -52,12 +52,12 @@ int main(int argc, char *argv[], char *envp[])
             _exit(status);
         }
         if (mystrcmp(job.pipeline[0].argv[0], "cd") == 0) {
-            handle_cd(job.pipeline[0].argv);
+	  handle_cd(job.pipeline[0].argv, envp);
             get_job(&job);
             continue;
         }
         if (mystrcmp(job.pipeline[0].argv[0], "export") == 0) {
-            handle_export(job.pipeline[0].argv);
+	  handle_export(job.pipeline[0].argv, envp);
             get_job(&job);
             continue;
         }
