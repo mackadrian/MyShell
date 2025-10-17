@@ -100,6 +100,17 @@ void build_cmdline(Job *job, char *cmdline, size_t size)
     if (job->background) strncat(cmdline, "&", size - strlen(cmdline) - 1);
 }
 
+/* ---
+Function Name: read_line_from_stdin
+Purpose:
+    Reads one line from stdin (up to newline or EOF) using system calls only.
+Input:
+    buffer - destination buffer
+    maxlen - maximum bytes to read (including null terminator)
+Output:
+    Returns number of bytes read (excluding null terminator), 
+    0 on EOF, or -1 on error.
+--- */
 void test_normal_command(char *envp[])
 {
     Job job;
@@ -120,6 +131,16 @@ void test_normal_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+
+/* ---
+Function Name: test_pipeline_command
+Purpose:
+    Tests execution of a multi-stage pipeline (e.g., echo | grep | sort).
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Verifies correct pipe setup and sequential data flow between commands.
+--- */
 void test_pipeline_command(char *envp[])
 {
     Job job;
@@ -151,6 +172,15 @@ void test_pipeline_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_background_command
+Purpose:
+    Tests background execution (e.g., sleep 2 &) and ensures non-blocking behavior.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Prints job details and verifies job runs in background.
+--- */
 void test_background_command(char *envp[])
 {
     Job job;
@@ -172,6 +202,15 @@ void test_background_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_redirection_command
+Purpose:
+    Tests combined input and output redirection through a simple pipeline.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Writes to output.txt after reading from input.txt, verifies file redirection.
+--- */
 void test_redirection_command(char *envp[])
 {
     Job job;
@@ -200,6 +239,15 @@ void test_redirection_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_invalid_command
+Purpose:
+    Tests handling of an invalid executable (command not found).
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Expects and reports an appropriate error message.
+--- */
 void test_invalid_command(char *envp[])
 {
     Job job;
@@ -220,6 +268,15 @@ void test_invalid_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_missing_file_command
+Purpose:
+    Tests handling of a missing input file for redirection.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Expects file not found error and verifies graceful failure.
+--- */
 void test_missing_file_command(char *envp[])
 {
     Job job;
@@ -241,6 +298,15 @@ void test_missing_file_command(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_sigint_handling
+Purpose:
+    Tests process response to SIGINT (Ctrl+C) while running a long command.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Observes signal handling and ensures process terminates cleanly.
+--- */
 void test_sigint_handling(char *envp[])
 {
     Job job;
@@ -261,6 +327,16 @@ void test_sigint_handling(char *envp[])
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: prepare_input_file
+Purpose:
+    Creates a test input file with predefined sample data for use in 
+    redirection and pipeline tests.
+Input:
+    filename - name of the file to create and write sample data into.
+Output:
+    Writes several lines of test text (e.g., fruit names) to the specified file.
+--- */
 void prepare_input_file(const char *filename) {
     FILE *f = fopen(filename, "w");
     if (!f) return;
@@ -268,6 +344,15 @@ void prepare_input_file(const char *filename) {
     fclose(f);
 }
 
+/* ---
+Function Name: check_output_file
+Purpose:
+    Opens and displays the contents of an output file after command execution.
+Input:
+    filename - name of the output file to open and read.
+Output:
+    Prints file contents to stdout; reports if file cannot be found.
+--- */
 void check_output_file(const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) {
@@ -284,6 +369,15 @@ void check_output_file(const char *filename) {
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_cat_input_redirection
+Purpose:
+    Tests input redirection with a single-stage 'cat' command.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Reads and prints contents of input.txt, verifying input redirection.
+--- */
 void test_cat_input_redirection(char *envp[]) {
     printf("=== Test: cat < input.txt ===\n");
     prepare_input_file("input.txt");
@@ -302,6 +396,16 @@ void test_cat_input_redirection(char *envp[]) {
     printf("-------------------------------------------------\n");
 }
 
+/* ---
+Function Name: test_sort_pipe_uniq_with_redirection
+Purpose:
+    Tests full pipeline with both input and output redirection:
+        sort < input.txt | uniq > output.txt
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Creates sorted, unique lines in output.txt for verification.
+--- */
 void test_sort_pipe_uniq_with_redirection(char *envp[]) {
     printf("=== Test: sort < input.txt | uniq > output.txt ===\n");
     prepare_input_file("input.txt");
@@ -325,6 +429,15 @@ void test_sort_pipe_uniq_with_redirection(char *envp[]) {
     check_output_file("output.txt");
 }
 
+/* ---
+Function Name: test_output_redirection_only
+Purpose:
+    Tests output redirection for a simple echo command.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Writes “hello world” to output.txt and verifies correctness.
+--- */
 void test_output_redirection_only(char *envp[]) {
     printf("=== Test: echo hello world > output.txt ===\n");
 
@@ -344,6 +457,15 @@ void test_output_redirection_only(char *envp[]) {
     check_output_file("output.txt");
 }
 
+/* ---
+Function Name: test_combined_redirection_and_pipeline
+Purpose:
+    Tests complex case: input redirection, pipeline, and output redirection.
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Produces filtered and sorted output written to output.txt.
+--- */
 void test_combined_redirection_and_pipeline(char *envp[]) {
     printf("=== Test: cat < input.txt | grep a | sort > output.txt ===\n");
     prepare_input_file("input.txt");
@@ -372,6 +494,15 @@ void test_combined_redirection_and_pipeline(char *envp[]) {
     check_output_file("output.txt");
 }
 
+/* ---
+Function Name: test_cat_frankenstein
+Purpose:
+    Tests reading large file via input redirection (cat < frankenstein.txt).
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Streams file content to stdout to verify system-call based execution.
+--- */
 void test_cat_frankenstein(char *envp[])
 {
     Job job;
