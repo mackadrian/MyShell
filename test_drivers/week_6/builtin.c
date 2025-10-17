@@ -1,15 +1,24 @@
 #include "builtin.h"
 #include "mystring.h"
 #include "myheap.h"
-#include <unistd.h>
-#include <stdlib.h> // only for getenv if allowed
+#include "jobs.h"
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <termios.h>
+
+Job jobs[MAX_JOBS];
+int num_jobs = 0;
 int last_exit_status = 0;
+int shell_pgid = 0;
+struct termios shell_tmodes;
 
 void handle_cd(char **argv) {
     const char *dir = argv[1];
     if (!dir) {
-        dir = getenv("HOME");  // you can keep this; getenv is fine
+        dir = getenv("HOME");
     }
     if (chdir(dir) < 0) {
         write(STDERR_FILENO, "cd: failed\n", 11);
@@ -17,8 +26,7 @@ void handle_cd(char **argv) {
 }
 
 int myatoi(const char *s) {
-    int val = 0, i = 0;
-    int sign = 1;
+    int val = 0, i = 0, sign = 1;
     if (s[0] == '-') { sign = -1; i++; }
     while (s[i]) { val = val * 10 + (s[i] - '0'); i++; }
     return val * sign;
@@ -28,26 +36,21 @@ void handle_exit(char **argv) {
     int status = 0;
     if (argv[1]) status = myatoi(argv[1]);
     free_all();
-    _exit(status);  // use _exit to avoid stdlib cleanup
+    _exit(status);
 }
 
 void handle_export(char **argv) {
     if (!argv[1]) return;
-
-    // split VAR=value manually
     int i = 0;
     while (argv[1][i] && argv[1][i] != '=') i++;
-    if (!argv[1][i]) return; // no '='
+    if (!argv[1][i]) return;
 
     argv[1][i] = '\0';
     char *var = argv[1];
     char *val = argv[1] + i + 1;
 
-    // custom setenv replacement
-    setenv(var, val, 1);  // if setenv is allowed, otherwise manage envp manually
+    setenv(var, val, 1);
 }
-
-extern int last_exit_status;
 
 void int_to_str(int n, char *buf) {
     int i = 0, start;
@@ -55,14 +58,10 @@ void int_to_str(int n, char *buf) {
 
     int neg = 0;
     if (n < 0) { neg = 1; n = -n; }
-    while (n > 0) {
-        buf[i++] = (n % 10) + '0';
-        n /= 10;
-    }
+    while (n > 0) { buf[i++] = (n % 10) + '0'; n /= 10; }
     if (neg) buf[i++] = '-';
-
     buf[i] = '\0';
-    // reverse buffer
+
     for (start = 0; start < i / 2; start++) {
         char tmp = buf[start];
         buf[start] = buf[i - 1 - start];
@@ -84,4 +83,23 @@ void expand_variables(char **argv) {
             }
         }
     }
+}
+
+void builtin_fg(char **argv) {
+    if (num_jobs == 0) return;
+    Job *job = &jobs[num_jobs - 1]; // pick most recent job
+    if (job->pgid <= 0) return;
+
+    tcsetpgrp(STDIN_FILENO, job->pgid); // give terminal
+    kill(-job->pgid, SIGCONT);          // continue job
+    int status;
+    waitpid(-job->pgid, &status, WUNTRACED);
+    tcsetpgrp(STDIN_FILENO, shell_pgid);
+}
+
+void builtin_bg(char **argv) {
+    if (num_jobs == 0) return;
+    Job *job = &jobs[num_jobs - 1]; // pick most recent stopped job
+    if (job->pgid <= 0) return;
+    kill(-job->pgid, SIGCONT);      // resume in background
 }

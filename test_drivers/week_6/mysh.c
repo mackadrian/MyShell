@@ -35,41 +35,44 @@ int main(int argc, char *argv[], char *envp[])
 
     while (!exitShell) {
         remove_zombies();
+	
         /* ignore empty input */
         if (job.num_stages == 0) {
             get_job(&job);
             continue;
         }
 
-	char **argv0 = job.pipeline[0].argv;
-	char *cmd = argv0[0];
+	expand_variables(job.pipeline[0].argv);
 
-	if (!cmd) {
-	  get_job(&job);
-	  continue;
-	}
-
-	expand_variables(argv0);
-
-        if (mystrcmp(cmd, "exit") == 0) {
-	  handle_exit(argv0);
-	  continue;
-        } else if (mystrcmp(cmd, "cd") == 0) {
-	  handle_cd(argv0);
-	  get_job(&job);
-	  continue;
-	} else if (mystrcmp(cmd, "export") == 0) {
-	  handle_export(argv0);
-	  get_job(&job);
-	  continue;
-	}	  
+	if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
+            int status = 0;
+            if (job.pipeline[0].argv[1])
+                status = myatoi(job.pipeline[0].argv[1]);
+            free_all();
+            _exit(status);
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "cd") == 0) {
+            handle_cd(job.pipeline[0].argv);
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "export") == 0) {
+            handle_export(job.pipeline[0].argv);
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "fg") == 0) {
+            builtin_fg(0);  // for simplicity, pick first job
+            get_job(&job);
+            continue;
+        }
+        if (mystrcmp(job.pipeline[0].argv[0], "bg") == 0) {
+            builtin_bg(0);  // for simplicity, pick first job
+            get_job(&job);
+            continue;
+        }
 
         run_job(&job, envp);
-
-	if (!job.background) {
-	  last_exit_status = fg_job_status;
-	}
-	
         free_all();
         get_job(&job);
     }
@@ -95,8 +98,13 @@ Output:
 static void remove_zombies()
 {
   int status;
-  while (waitpid(-1, &status, WNOHANG) > 0)
-    {}
+  while (waitpid(-1, &status, WNOHANG) > 0) {}
+}
+
+static void sigchld_handler(int sig) {
+  int status;
+  int pid;
+  while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {}
 }
 
 /* ---

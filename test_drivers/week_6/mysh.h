@@ -15,4 +15,6 @@ extern int fg_job_status;
 
 static void remove_zombies();
 static void initialize_signal_handler();
+static void sigchld_handler(int sig);
+
 #endif
