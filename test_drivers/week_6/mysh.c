@@ -28,46 +28,49 @@ Output: returns 0 upon successful execution
 int main(int argc, char *argv[], char *envp[])
 {
     Job job;
-    int exitShell = 0;
+    int exitShell = FALSE_VALUE;
 
     initialize_signal_handler();
     get_job(&job);
 
     while (!exitShell) {
         remove_zombies();
-	
-        /* ignore empty input */
-        if (job.num_stages == 0) {
+
+        if (job.num_stages == FALSE_VALUE) {
             get_job(&job);
             continue;
         }
 
-	expand_variables(job.pipeline[0].argv, envp);
+        expand_variables(job.pipeline[FALSE_VALUE].argv, envp);
 
-	if (mystrcmp(job.pipeline[0].argv[0], "exit") == 0) {
-            int status = 0;
-            if (job.pipeline[0].argv[1])
-                status = myatoi(job.pipeline[0].argv[1]);
+        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "exit") == FALSE_VALUE) {
+            int status = FALSE_VALUE;
+            if (job.pipeline[FALSE_VALUE].argv[TRUE_VALUE])
+                status = myatoi(job.pipeline[FALSE_VALUE].argv[TRUE_VALUE]);
             free_all();
             _exit(status);
         }
-        if (mystrcmp(job.pipeline[0].argv[0], "cd") == 0) {
-	  handle_cd(job.pipeline[0].argv, envp);
+
+        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "cd") == FALSE_VALUE) {
+            handle_cd(job.pipeline[FALSE_VALUE].argv, envp);
             get_job(&job);
             continue;
         }
-        if (mystrcmp(job.pipeline[0].argv[0], "export") == 0) {
-	  handle_export(job.pipeline[0].argv, envp);
+
+        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "export") == FALSE_VALUE) {
+            handle_export(job.pipeline[FALSE_VALUE].argv, envp);
             get_job(&job);
             continue;
         }
-        if (mystrcmp(job.pipeline[0].argv[0], "fg") == 0) {
-            builtin_fg(0);  // for simplicity, pick first job
+
+        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "fg") == FALSE_VALUE) {
+            builtin_fg(NULL_PTR);
             get_job(&job);
             continue;
         }
-        if (mystrcmp(job.pipeline[0].argv[0], "bg") == 0) {
-            builtin_bg(0);  // for simplicity, pick first job
+
+        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "bg") == FALSE_VALUE) {
+            builtin_bg(NULL_PTR);
             get_job(&job);
             continue;
         }
@@ -77,7 +80,7 @@ int main(int argc, char *argv[], char *envp[])
         get_job(&job);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 
@@ -95,14 +98,8 @@ Input:
 Output:
   None
 --- */
-static void remove_zombies()
+static void remove_zombies(void)
 {
-  int status;
-  while (waitpid(-1, &status, WNOHANG) > 0) {}
-}
-
-static void sigchld_handler(int sig) {
-  int status;
-  int pid;
-  while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {}
+    int status;
+    while (waitpid(WAIT_ANY_CHILD, &status, WNOHANG) > FALSE_VALUE) {}
 }
