@@ -27,10 +27,10 @@ Output:
 --- */
 static char* get_env_value(const char *name, char *envp[]) {
     int name_len = mystrlen(name);
-    for (int i = 0; envp[i]; i++) {
-        int j = 0;
+    for (int i = INITIAL_INDEX; envp[i]; i++) {
+        int j = INITIAL_INDEX;
         while (envp[i][j] && j < name_len && envp[i][j] == name[j]) j++;
-        if (j == name_len && envp[i][j] == '=') {
+        if (j == name_len && envp[i][j] == ENV_ASSIGN_CHAR) {
             return envp[i] + j + 1;
         }
     }
@@ -50,11 +50,9 @@ Output:
 --- */
 void handle_cd(char **argv, char *envp[]) {
     const char *dir = argv[1];
-    if (!dir) {
-        dir = get_env_value("HOME", envp);
-    }
+    if (!dir) dir = get_env_value(HOME_ENV_NAME, envp);
     if (!dir || chdir(dir) < 0) {
-        write(STDERR_FILENO, "cd: failed\n", 11);
+        write(STDERR_FILENO, CD_ERROR_MSG, CD_ERROR_MSG_LEN);
     }
 }
 
@@ -69,9 +67,15 @@ Output:
     Integer representation of the string.
 --- */
 int myatoi(const char *s) {
-    int val = 0, i = 0, sign = 1;
-    if (s[0] == '-') { sign = -1; i++; }
-    while (s[i]) { val = val * 10 + (s[i] - '0'); i++; }
+    int val = 0, i = INITIAL_INDEX, sign = 1;
+    if (s[INITIAL_INDEX] == NEGATIVE_SIGN) { 
+        sign = -1; 
+        i++; 
+    }
+    while (s[i] != NULL_CHAR) { 
+        val = val * DECIMAL_BASE + (s[i] - ZERO_CHAR); 
+        i++; 
+    }
     return val * sign;
 }
 
@@ -104,20 +108,19 @@ Output:
 void handle_export(char **argv, char *envp[]) {
     if (!argv[1]) return;
 
-    int i = 0;
-    while (argv[1][i] && argv[1][i] != '=') i++;
+    int i = INITIAL_INDEX;
+    while (argv[1][i] && argv[1][i] != ENV_ASSIGN_CHAR) i++;
     if (!argv[1][i]) return;
 
-    argv[1][i] = '\0';
+    argv[1][i] = ENV_TERMINATOR_NULL;
     char *var = argv[1];
     char *val = argv[1] + i + 1;
 
-    // Replace if already exists
-    for (int e = 0; envp[e]; e++) {
-        int j = 0;
+    for (int e = INITIAL_INDEX; envp[e]; e++) {
+        int j = INITIAL_INDEX;
         while (envp[e][j] && var[j] && envp[e][j] == var[j]) j++;
-        if (envp[e][j] == '=' && var[j] == '\0') {
-            int len = mystrlen(var) + mystrlen(val) + 2;
+        if (envp[e][j] == ENV_ASSIGN_CHAR && var[j] == ENV_TERMINATOR_NULL) {
+            int len = mystrlen(var) + mystrlen(val) + ENV_STRING_EXTRA;
             char *new_entry = alloc(len);
             if (!new_entry) return;
             mystrcpy(new_entry, var);
@@ -127,6 +130,21 @@ void handle_export(char **argv, char *envp[]) {
             return;
         }
     }
+
+    for (int e = INITIAL_INDEX; envp[e]; e++) {
+        if (!envp[e + 1]) {
+            int len = mystrlen(var) + mystrlen(val) + ENV_STRING_EXTRA;
+            char *new_entry = alloc(len);
+            if (!new_entry) return;
+            mystrcpy(new_entry, var);
+            mystrcat(new_entry, "=");
+            mystrcat(new_entry, val);
+            envp[e + 1] = new_entry;
+            envp[e + 2] = NULL;
+            return;
+        }
+    }
+}
 
     // Append new variable if not found
     for (int e = 0; envp[e]; e++) {
@@ -154,17 +172,28 @@ Input:
 Output:
     String representation of n stored in buf.
 --- */
+
 void int_to_str(int n, char *buf) {
-    int i = 0, start;
-    if (n == 0) { buf[0] = '0'; buf[1] = '\0'; return; }
+    int i = INITIAL_INDEX, start;
+    if (n == 0) { 
+        buf[INITIAL_INDEX] = ZERO_CHAR; 
+        buf[1] = NULL_CHAR; 
+        return; 
+    }
 
     int neg = 0;
-    if (n < 0) { neg = 1; n = -n; }
-    while (n > 0) { buf[i++] = (n % 10) + '0'; n /= 10; }
-    if (neg) buf[i++] = '-';
-    buf[i] = '\0';
+    if (n < 0) { 
+        neg = 1; 
+        n = -n; 
+    }
+    while (n > 0) { 
+        buf[i++] = (n % DECIMAL_BASE) + ZERO_CHAR; 
+        n /= DECIMAL_BASE; 
+    }
+    if (neg) buf[i++] = NEGATIVE_SIGN;
+    buf[i] = NULL_CHAR;
 
-    for (start = 0; start < i / 2; start++) {
+    for (start = INITIAL_INDEX; start < i / 2; start++) {
         char tmp = buf[start];
         buf[start] = buf[i - 1 - start];
         buf[i - 1 - start] = tmp;
@@ -182,16 +211,16 @@ Output:
     Modifies argv in place with expanded values.
 --- */
 void expand_variables(char **argv, char *envp[]) {
-    for (int i = 0; argv[i]; i++) {
-        if (argv[i][0] == '$') {
-            if (mystrcmp(argv[i], "$?") == 0) {
-                char buf[16];
+    for (int i = INITIAL_INDEX; argv[i]; i++) {
+        if (argv[i][INITIAL_INDEX] == '$') {
+            if (mystrcmp(argv[i], VAR_EXIT_STATUS) == 0) {
+                char buf[INT_BUFFER_LEN];
                 int_to_str(last_exit_status, buf);
                 mystrcpy(argv[i], buf);
             } else {
                 char *val = get_env_value(argv[i] + 1, envp);
                 if (val) mystrcpy(argv[i], val);
-                else argv[i][0] = '\0';
+                else argv[i][INITIAL_INDEX] = NULL_CHAR;
             }
         }
     }
@@ -207,9 +236,9 @@ Output:
     Transfers terminal control and waits for job completion.
 --- */
 void builtin_fg(char **argv) {
-    if (num_jobs == 0) return;
+    if (num_jobs == NO_JOBS) return;
     Job *job = &jobs[num_jobs - 1];
-    if (job->pgid <= 0) return;
+    if (job->pgid <= INVALID_PGID) return;
 
     tcsetpgrp(STDIN_FILENO, job->pgid);
     kill(-job->pgid, SIGCONT);
@@ -228,8 +257,8 @@ Output:
     Sends SIGCONT to the job’s process group.
 --- */
 void builtin_bg(char **argv) {
-    if (num_jobs == 0) return;
+    if (num_jobs == NO_JOBS) return;
     Job *job = &jobs[num_jobs - 1];
-    if (job->pgid <= 0) return;
+    if (job->pgid <= INVALID_PGID) return;
     kill(-job->pgid, SIGCONT);
 }
