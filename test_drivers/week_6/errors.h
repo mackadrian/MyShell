@@ -4,6 +4,8 @@
 #define STD_OUT 1
 #define STD_ERR 2
 
+#define MIN_ERROR_CODE 0
+
 enum ErrorCode {
     ERR_CMD_NOT_FOUND = 1,   /* start numbering from 1 */
     ERR_ARG_EXCD,
