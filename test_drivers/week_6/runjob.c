@@ -8,7 +8,6 @@
 #include <sys/wait.h>  /* waitpid */
 #include <sys/stat.h>  /* stat */
 #include <fcntl.h>     /* open, creat */
-#include <stdlib.h>    /* malloc for path algorithm */
 
 /* ---
 Function Name: run_job
@@ -115,7 +114,7 @@ char* resolve_command_path(const char *cmd, char *envp[]) {
             struct stat st;
             if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR)) {
                 int len = 0; while (cmd[len]) len++;
-                char *copy = (char*)malloc(len+1);
+                char *copy = (char*)alloc(len+1);
                 if (!copy) return NULL;
                 for (int i = 0; i <= len; i++) copy[i] = cmd[i];
                 return copy;
@@ -152,7 +151,7 @@ char* resolve_command_path(const char *cmd, char *envp[]) {
             struct stat st;
             if (stat(fullpath, &st) == 0 && (st.st_mode & S_IXUSR)) {
                 int plen = 0; while (fullpath[plen]) plen++;
-                char *result = (char*)malloc(plen+1);
+                char *result = (char*)alloc(plen+1);
                 if (!result) return NULL;
                 for (int j = 0; j <= plen; j++) result[j] = fullpath[j];
                 return result;
