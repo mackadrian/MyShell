@@ -53,7 +53,7 @@ test_runjob.o: test_runjob.c jobs.h runjob.h mystring.h myheap.h errors.h
 # Clean
 # ----------------------
 clean:
-	/usr/bin/rm -f *.o mysh test_getjob test_runjob
+	/usr/bin/rm -f *.o *~ mysh test_getjob test_runjob
 
 # ----------------------
 # Build everything
