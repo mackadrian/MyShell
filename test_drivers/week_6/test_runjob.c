@@ -149,7 +149,7 @@ void test_pipeline_command(char *envp[])
     job.pipeline[0].argc = 3;
     job.pipeline[0].argv[0] = "echo";
     job.pipeline[0].argv[1] = "-e";
-    job.pipeline[0].argv[2] = "foo\nbar\nbaz";
+    job.pipeline[0].argv[2] = "foo\\nbar\\nbaz";
     job.pipeline[0].argv[3] = NULL;
 
     job.pipeline[1].argc = 2;
