@@ -1,18 +1,10 @@
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
+// Global Variable
 extern int last_exit_status;
 
-void handle_cd(char **argv, char *envp[]);
-void handle_exit(char **argv);
-void handle_export(char **argv, char *envp[]);
-void expand_variables(char **argv, char *envp[]);
-void builtin_fg(char **argv);
-void builtin_bg(char **argv);
-
-int myatoi(const char *s);
-void int_to_str(int n, char *buf);
-
+// Constant Defintions
 #define CD_ERROR_MSG            "cd: failed\n"
 #define CD_ERROR_MSG_LEN        11
 
@@ -33,5 +25,16 @@ void int_to_str(int n, char *buf);
 #define INVALID_PGID            0
 
 #define VAR_EXIT_STATUS         "$?"
+
+// Function Declarations
+void handle_cd(char **argv, char *envp[]);
+void handle_exit(char **argv);
+void handle_export(char **argv, char *envp[]);
+void expand_variables(char **argv, char *envp[]);
+void builtin_fg(char **argv);
+void builtin_bg(char **argv);
+
+int myatoi(const char *s);
+void int_to_str(int n, char *buf);
 
 #endif
