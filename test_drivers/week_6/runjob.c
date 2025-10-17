@@ -22,12 +22,14 @@ Output:
 --- */
 void run_job(Job *job, char *envp[])
 {
+
+    int fg_job_status;
     if (!job || job->num_stages == 0) return;
 
     int pipefd[MAX_PIPELINE_LEN - 1][2];
     int pids[MAX_PIPELINE_LEN];
 
-    fg_job_running = !job->background;
+    int fg_job_running = !job->background;
 
     create_pipes(pipefd, job->num_stages);
 

@@ -2,7 +2,6 @@
 #include "mystring.h"
 #include "myheap.h"
 #include "errors.h"
-#include "signal.h"
 
 #include <unistd.h>    // fork, pipe, dup2, execve, read, write, _exit
 #include <sys/wait.h>  // waitpid
@@ -30,20 +29,15 @@ void get_job(Job *job)
 {
     set_job(job);
 
+    write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
+
     char *command_buffer = alloc(MAX_ARGS);
     if (!command_buffer) return;
 
-    /* Install signal handler for Ctrl+C */
-    signal(SIGINT, handle_signal);
-
-    /* Prompt and read command line */
-    write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
-    int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
+    int bytes_read = read_line_from_stdin(command_buffer, MAX_ARGS);
     if (bytes_read <= 0) return;
 
-    trim_newline(command_buffer, bytes_read);
     normalize_newlines(command_buffer);
-
     int start = skip_leading_whitespace(command_buffer);
     if (command_buffer[start] == '\0') return;
 
@@ -314,4 +308,38 @@ int check_read_status(int bytes_read)
     }
 
     return exit_status;
+}
+
+/* ---
+Function Name: read_line_from_stdin
+Purpose:
+    Reads one line from stdin (up to newline or EOF) using system calls only.
+Input:
+    buffer - destination buffer
+    maxlen - maximum bytes to read (including null terminator)
+Output:
+    Returns number of bytes read (excluding null terminator), 
+    0 on EOF, or -1 on error.
+--- */
+static int read_line_from_stdin(char *buffer, int maxlen)
+{
+    int total = 0;
+    char c;
+
+    while (total < maxlen - 1) {
+        int n = read(STDIN_FILENO, &c, 1);
+
+        if (n == 0) {
+            break;
+        } else if (n < 0) {
+            return -1;
+        } else if (c == '\n') {
+            break;
+        }
+
+        buffer[total++] = c;
+    }
+
+    buffer[total] = '\0';
+    return total;
 }
