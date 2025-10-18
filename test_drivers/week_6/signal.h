@@ -6,6 +6,10 @@
 #define SIGNAL_PROMPT "\nmysh$ "
 #define SIGNAL_PROMPT_LEN 8
 
+#define NEWLINE_STR             "\n"
+#define NEWLINE_LEN             1
+#define NO_FLAGS                0
+
 extern volatile sig_atomic_t fg_job_running;
 
 void handle_signal(int sig);
