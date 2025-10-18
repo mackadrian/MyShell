@@ -25,11 +25,7 @@ Output:
 void handle_signal(int sig)
 {
     if (sig == SIGINT) {
-        if (fg_job_running) {
-            write(STDOUT_FILENO, NEWLINE_STR, NEWLINE_LEN);
-        } else {
-            write(STDOUT_FILENO, SIGNAL_PROMPT, SIGNAL_PROMPT_LEN);
-        }
+        write(STDOUT_FILENO, NEWLINE_STR, NEWLINE_LEN);
     }
 }
 
