@@ -88,5 +88,9 @@ void initialize_signal_handler()
     sa_chld.sa_flags = SA_RESTART | SA_NOCLDSTOP;
     sigaction(SIGCHLD, &sa_chld, NULL);
 
-    signal(SIGTSTP, SIG_IGN); // ignore Ctrl+Z
+    struct sigaction sa_tstp;
+    sa_tstp.sa_handler = SIG_IGN;
+    sigemptyset(&sa_tstp.sa_mask);
+    sa_tstp.sa_flags = 0;
+    sigaction(SIGTSTP, &sa_tstp, NULL);
 }
