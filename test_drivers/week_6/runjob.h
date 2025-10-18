@@ -28,6 +28,10 @@
 
 char* resolve_command_path(const char *cmd, char *envp[]);
 void run_job (Job *job, char* envp[]);
+void add_job(Job *job, int pid);
+
+extern Job jobs[MAX_JOBS];
+extern int num_jobs;
 
 static void build_fullpath(char *buf, const char *dir, const char *cmd);
 static void print_background_pid(Job *job, int pid);

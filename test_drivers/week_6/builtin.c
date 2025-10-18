@@ -268,9 +268,13 @@ void handle_jobs(char **argv)
     {
         if (jobs[jobIndex].num_stages > 0)
         {
-            const char *state = jobs[jobIndex].background
-                                    ? STATUS_RUNNING_TEXT
-                                    : STATUS_FOREGROUND_TEXT;
+	  const char *state;
+
+	  if (jobs[jobIndex].background) {
+	    state = STATUS_RUNNING_TEXT;
+	  } else {
+	    state = STATUS_DONE_TEXT;
+	  }
 
             write(STDOUT_FILENO, "[", 1);
 

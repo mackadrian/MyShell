@@ -49,6 +49,7 @@ void run_job(Job *job, char *envp[])
 
     if (job->background) {
         print_background_pid(job, pids[ZERO_VALUE]);
+	add_job(job, pids[ZERO_VALUE]);
         fg_job_running = ZERO_VALUE;
     } else {
         int status;
@@ -70,7 +71,29 @@ void run_job(Job *job, char *envp[])
     free_all();
 }
 
+/* ---
+Function Name: add_job
 
+Purpose:
+  Adds a background job to the global jobs table for later reference by builtins
+  such as 'jobs', 'fg', and 'bg'.
+
+Input:
+  job  - pointer to Job structure representing the launched job
+  pid  - process ID of the first process in the job pipeline
+
+Output:
+  None. Updates global jobs[] and num_jobs.
+--- */
+void add_job(Job *job, int pid)
+{
+    if (num_jobs >= MAX_JOBS)
+        return;
+
+    jobs[num_jobs] = *job;         /* copy job info */
+    jobs[num_jobs].pgid = pid;     /* store process group ID */
+    num_jobs++;
+}
 
 /* ---
 Function Name: build_fullpath
