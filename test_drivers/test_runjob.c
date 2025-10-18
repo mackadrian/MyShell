@@ -248,14 +248,19 @@ static void test_background_command(char *envp[])
 /* ---
 Function Name: test_redirection_command
 Purpose:
-    Tests combined input and output redirection through a simple pipeline.
+    Tests input and output redirection with a simple pipeline:
+        cat < input.txt | sort > output.txt
+    Ensures redirection and pipe setup function correctly in run_job().
 Input:
     envp - environment variable array passed to execve().
 Output:
-    Writes to output.txt after reading from input.txt, verifies file redirection.
+    Writes sorted content from input.txt to output.txt and displays result.
 --- */
 static void test_redirection_command(char *envp[])
 {
+    printf("=== Test: cat < input.txt | sort > output.txt ===\n");
+    prepare_input_file("input.txt");
+
     Job job;
     set_test_job(&job);
 
@@ -264,11 +269,11 @@ static void test_redirection_command(char *envp[])
     job.outfile_path = "output.txt";
 
     job.pipeline[0].argc = 1;
-    job.pipeline[0].argv[0] = "sort";
+    job.pipeline[0].argv[0] = "cat";
     job.pipeline[0].argv[1] = NULL;
 
     job.pipeline[1].argc = 1;
-    job.pipeline[1].argv[0] = "uniq";
+    job.pipeline[1].argv[0] = "sort";
     job.pipeline[1].argv[1] = NULL;
 
     char cmdline[256];
@@ -279,7 +284,7 @@ static void test_redirection_command(char *envp[])
     print_job(&job);
 
     run_job(&job, envp);
-    printf("-------------------------------------------------\n");
+    check_output_file("output.txt");
 }
 
 /* ---

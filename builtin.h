@@ -5,41 +5,56 @@
 
 // Global Variable
 extern int last_exit_status;
+extern Job jobs[MAX_JOBS];
+extern int num_jobs;
 
 // Constant Defintions
+// General / Error Messages
 #define CD_ERROR_MSG            "cd: failed\n"
 #define CD_ERROR_MSG_LEN        11
 
+// Environment Handling
 #define HOME_ENV_NAME           "HOME"
 #define ENV_ASSIGN_CHAR         '='
 #define ENV_TERMINATOR_NULL     '\0'
+#define ENV_STRING_EXTRA        2
+#define VAR_EXIT_STATUS         "$?"
+#define DEF_EXIT_STATUS         0
+#define TOKEN_$                 '$'
+#define STRINGS_MATCH           0
 
+// Numeric / Parsing
+#define FALSE                   0
+#define TRUE                    1
+#define NEGATIVE_SIGN_MUL       -1
+#define ZERO_VALUE              0
+#define HALF                    2
 #define DECIMAL_BASE            10
 #define INITIAL_INDEX           0
 #define NEGATIVE_SIGN           '-'
 #define ZERO_CHAR               '0'
 #define NULL_CHAR               '\0'
-
 #define INT_BUFFER_LEN          16
-#define ENV_STRING_EXTRA        2
+#define POSITIVE_SIGN           1
+#define ASSIGN_EQUAL            "="
 
+// Jobs / Process Management
 #define NO_JOBS                 0
 #define INVALID_PGID            0
+#define JOB_OFFSET_INDEX        1
+#define JOB_DISPLAY_WIDTH       8
+#define JOB_ID_OFFSET           1
 
-#define VAR_EXIT_STATUS         "$?"
+// Output Formatting
+#define TERMINAL_TAB_CHAR       "\t"
+#define JOB_NEWLINE_CHAR        "\n"
+#define JOB_STRING_END          '\0'
 
-#define JOB_OFFSET_INDEX      1
-#define JOB_DISPLAY_WIDTH     8
-#define JOB_ID_OFFSET         1
-#define TERMINAL_TAB_CHAR     "\t"
-#define JOB_NEWLINE_CHAR      "\n"
-#define JOB_STRING_END        '\0'
-#define STATUS_RUNNING_TEXT   "Running"
-#define STATUS_DONE_TEXT      "Done"
-#define STATUS_STOPPED_TEXT   "Stopped"
+// Job State Text
+#define STATUS_RUNNING_TEXT     "Running"
+#define STATUS_DONE_TEXT        "Done"
+#define STATUS_STOPPED_TEXT     "Stopped"
 
-extern Job jobs[MAX_JOBS];
-extern int num_jobs;
 
 // Function Declarations
 void handle_cd(char **argv, char *envp[]);

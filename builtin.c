@@ -10,9 +10,9 @@
 #include <termios.h>
 
 Job jobs[MAX_JOBS];
-int num_jobs = 0;
-int last_exit_status = 0;
-int shell_pgid = 0;
+int num_jobs = ZERO_VALUE;
+int last_exit_status = ZERO_VALUE;
+int shell_pgid = ZERO_VALUE;
 struct termios shell_tmodes;
 
 /* ---
@@ -34,7 +34,7 @@ static char* get_env_value(const char *name, char *envp[]) {
         int j = INITIAL_INDEX;
         while (envp[i][j] && j < name_len && envp[i][j] == name[j]) j++;
         if (j == name_len && envp[i][j] == ENV_ASSIGN_CHAR) {
-            return envp[i] + j + 1;
+            return envp[i] + j + JOB_OFFSET_INDEX;
         }
     }
     return NULL;
@@ -55,9 +55,9 @@ Output:
     Changes current directory, prints error on failure.
 --- */
 void handle_cd(char **argv, char *envp[]) {
-    const char *dir = argv[1];
+    const char *dir = argv[JOB_OFFSET_INDEX];
     if (!dir) dir = get_env_value(HOME_ENV_NAME, envp);
-    if (!dir || chdir(dir) < 0) {
+    if (!dir || chdir(dir) < ZERO_VALUE) {
         write(STDERR_FILENO, CD_ERROR_MSG, CD_ERROR_MSG_LEN);
     }
 }
@@ -76,9 +76,9 @@ Output:
     Integer representation of the string.
 --- */
 int myatoi(const char *s) {
-    int val = 0, i = INITIAL_INDEX, sign = 1;
+    int val = ZERO_VALUE, i = INITIAL_INDEX, sign = POSITIVE_SIGN;
     if (s[INITIAL_INDEX] == NEGATIVE_SIGN) { 
-        sign = -1; 
+        sign = NEGATIVE_SIGN_MUL; 
         i++; 
     }
     while (s[i] != NULL_CHAR) { 
@@ -101,8 +101,8 @@ Output:
     Exits the shell process with the provided status.
 --- */
 void handle_exit(char **argv) {
-    int status = 0;
-    if (argv[1]) status = myatoi(argv[1]);
+    int status = DEF_EXIT_STATUS;
+    if (argv[JOB_OFFSET_INDEX]) status = myatoi(argv[JOB_OFFSET_INDEX]);
     free_all();
     _exit(status);
 }
@@ -121,15 +121,15 @@ Output:
     Adds or updates the environment variable.
 --- */
 void handle_export(char **argv, char *envp[]) {
-    if (!argv[1]) return;
+    if (!argv[JOB_OFFSET_INDEX]) return;
 
     int i = INITIAL_INDEX;
-    while (argv[1][i] && argv[1][i] != ENV_ASSIGN_CHAR) i++;
-    if (!argv[1][i]) return;
+    while (argv[JOB_OFFSET_INDEX][i] && argv[1][i] != ENV_ASSIGN_CHAR) i++;
+    if (!argv[JOB_OFFSET_INDEX][i]) return;
 
     argv[1][i] = ENV_TERMINATOR_NULL;
-    char *var = argv[1];
-    char *val = argv[1] + i + 1;
+    char *var = argv[JOB_OFFSET_INDEX];
+    char *val = argv[JOB_OFFSET_INDEX] + i + JOB_OFFSET_INDEX;
 
     for (int e = INITIAL_INDEX; envp[e]; e++) {
         int j = INITIAL_INDEX;
@@ -139,7 +139,7 @@ void handle_export(char **argv, char *envp[]) {
             char *new_entry = alloc(len);
             if (!new_entry) return;
             mystrcpy(new_entry, var);
-            mystrcat(new_entry, "=");
+            mystrcat(new_entry, ASSIGN_EQUAL);
             mystrcat(new_entry, val);
             envp[e] = new_entry;
             return;
@@ -147,12 +147,12 @@ void handle_export(char **argv, char *envp[]) {
     }
 
     for (int e = INITIAL_INDEX; envp[e]; e++) {
-        if (!envp[e + 1]) {
+        if (!envp[e + JOB_OFFSET_INDEX]) {
             int len = mystrlen(var) + mystrlen(val) + ENV_STRING_EXTRA;
             char *new_entry = alloc(len);
             if (!new_entry) return;
             mystrcpy(new_entry, var);
-            mystrcat(new_entry, "=");
+            mystrcat(new_entry, ASSIGN_EQUAL);
             mystrcat(new_entry, val);
             envp[e + 1] = new_entry;
             envp[e + 2] = NULL;
@@ -161,16 +161,16 @@ void handle_export(char **argv, char *envp[]) {
     }
 
 // Append new variable if not found
-    for (int e = 0; envp[e]; e++) {
-        if (!envp[e + 1]) {
-            int len = mystrlen(var) + mystrlen(val) + 2;
+    for (int e = ZERO_VALUE; envp[e]; e++) {
+        if (!envp[e + JOB_OFFSET_INDEX]) {
+            int len = mystrlen(var) + mystrlen(val) + ENV_STRING_EXTRA;
             char *new_entry = alloc(len);
             if (!new_entry) return;
             mystrcpy(new_entry, var);
-            mystrcat(new_entry, "=");
+            mystrcat(new_entry, ASSIGN_EQUAL);
             mystrcat(new_entry, val);
-            envp[e + 1] = new_entry;
-            envp[e + 2] = NULL;
+            envp[e + JOB_OFFSET_INDEX] = new_entry;
+            envp[e + ENV_STRING_EXTRA] = NULL;
             return;
         }
     }
@@ -192,28 +192,28 @@ Output:
 
 void int_to_str(int n, char *buf) {
     int i = INITIAL_INDEX, start;
-    if (n == 0) { 
+    if (n == ZERO_VALUE) { 
         buf[INITIAL_INDEX] = ZERO_CHAR; 
         buf[1] = NULL_CHAR; 
         return; 
     }
 
-    int neg = 0;
-    if (n < 0) { 
-        neg = 1; 
+    int neg = FALSE;
+    if (n < ZERO_VALUE) { 
+        neg = TRUE; 
         n = -n; 
     }
-    while (n > 0) { 
+    while (n > ZERO_VALUE) { 
         buf[i++] = (n % DECIMAL_BASE) + ZERO_CHAR; 
         n /= DECIMAL_BASE; 
     }
     if (neg) buf[i++] = NEGATIVE_SIGN;
     buf[i] = NULL_CHAR;
 
-    for (start = INITIAL_INDEX; start < i / 2; start++) {
+    for (start = INITIAL_INDEX; start < i / HALF; start++) {
         char tmp = buf[start];
-        buf[start] = buf[i - 1 - start];
-        buf[i - 1 - start] = tmp;
+        buf[start] = buf[i - JOB_OFFSET_INDEX - start];
+        buf[i - JOB_OFFSET_INDEX - start] = tmp;
     }
 }
 
@@ -232,13 +232,13 @@ Output:
 --- */
 void expand_variables(char **argv, char *envp[]) {
     for (int i = INITIAL_INDEX; argv[i]; i++) {
-        if (argv[i][INITIAL_INDEX] == '$') {
-            if (mystrcmp(argv[i], VAR_EXIT_STATUS) == 0) {
+        if (argv[i][INITIAL_INDEX] == TOKEN_$) {
+            if (mystrcmp(argv[i], VAR_EXIT_STATUS) == STRINGS_MATCH) {
                 char buf[INT_BUFFER_LEN];
                 int_to_str(last_exit_status, buf);
                 mystrcpy(argv[i], buf);
             } else {
-                char *val = get_env_value(argv[i] + 1, envp);
+                char *val = get_env_value(argv[i] + JOB_OFFSET_INDEX, envp);
                 if (val) mystrcpy(argv[i], val);
                 else argv[i][INITIAL_INDEX] = NULL_CHAR;
             }
@@ -264,9 +264,9 @@ void handle_jobs(char **argv)
 {
     (void)argv;  /* avoid unused warning */
 
-    for (int jobIndex = 0; jobIndex < num_jobs; jobIndex++)
+    for (int jobIndex = INITIAL_INDEX; jobIndex < num_jobs; jobIndex++)
     {
-        if (jobs[jobIndex].num_stages > 0)
+        if (jobs[jobIndex].num_stages > ZERO_VALUE)
         {
 	  const char *state;
 
@@ -284,12 +284,12 @@ void handle_jobs(char **argv)
 
             write(STDOUT_FILENO, "] ", 2);
             write(STDOUT_FILENO, state, mystrlen(state));
-            write(STDOUT_FILENO, TERMINAL_TAB_CHAR, 1);
+            write(STDOUT_FILENO, TERMINAL_TAB_CHAR, mystrlen(TERMINAL_TAB_CHAR));
 
             /* print command name for first stage */
-            write(STDOUT_FILENO, jobs[jobIndex].pipeline[0].argv[0],
-                  mystrlen(jobs[jobIndex].pipeline[0].argv[0]));
-            write(STDOUT_FILENO, JOB_NEWLINE_CHAR, 1);
+            write(STDOUT_FILENO, jobs[jobIndex].pipeline[INITIAL_INDEX].argv[INITIAL_INDEX],
+                  mystrlen(jobs[jobIndex].pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]));
+            write(STDOUT_FILENO, JOB_NEWLINE_CHAR, mystrlen(JOB_NEWLINE_CHAR));
         }
     }
 }
@@ -308,7 +308,7 @@ Output:
 --- */
 void builtin_fg(char **argv) {
     if (num_jobs == NO_JOBS) return;
-    Job *job = &jobs[num_jobs - 1];
+    Job *job = &jobs[num_jobs - JOB_OFFSET_INDEX];
     if (job->pgid <= INVALID_PGID) return;
 
     /* Move job to foreground */
@@ -316,10 +316,10 @@ void builtin_fg(char **argv) {
 
     /* Resume stopped job */
     kill(-job->pgid, SIGCONT);
-    job->background = 0;
+    job->background = FALSE;
 
     int status;
-    while (waitpid(-job->pgid, &status, WUNTRACED) > 0) {
+    while (waitpid(-job->pgid, &status, WUNTRACED) > ZERO_VALUE) {
         if (WIFSTOPPED(status)) {
             write(STDOUT_FILENO, "[FG stopped]\n", 13);
             return;
@@ -346,19 +346,19 @@ Output:
 --- */
 void builtin_bg(char **argv) {
     if (num_jobs == NO_JOBS) return;
-    Job *job = &jobs[num_jobs - 1];
+    Job *job = &jobs[num_jobs - JOB_OFFSET_INDEX];
     if (job->pgid <= INVALID_PGID) return;
 
     /* Resume stopped job in background */
     kill(-job->pgid, SIGCONT);
-    job->background = 1;
+    job->background = TRUE;
 
     write(STDOUT_FILENO, "[", 1);
-    char buf[8];
+    char buf[JOB_DISPLAY_WIDTH];
     myitoa(num_jobs, buf);
     write(STDOUT_FILENO, buf, mystrlen(buf));
     write(STDOUT_FILENO, "] Running\t", 10);
-    write(STDOUT_FILENO, job->pipeline[0].argv[0],
-          mystrlen(job->pipeline[0].argv[0]));
-    write(STDOUT_FILENO, "\n", 1);
+    write(STDOUT_FILENO, job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX],
+          mystrlen(job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]));
+    write(STDOUT_FILENO, JOB_NEWLINE_CHAR, mystrlen(JOB_NEWLINE_CHAR));
 }
