@@ -17,11 +17,14 @@ struct termios shell_tmodes;
 
 /* ---
 Function Name: get_env_value
+
 Purpose:
     Retrieves the value of an environment variable manually from envp.
+    
 Input:
     name - variable name
     envp - environment variable array
+    
 Output:
     Pointer to value string, or NULL if not found.
 --- */
@@ -40,11 +43,14 @@ static char* get_env_value(const char *name, char *envp[]) {
 
 /* ---
 Function Name: handle_cd
+
 Purpose:
     Implements the 'cd' builtin command.
+    
 Input:
     argv - argument list
     envp - environment variables
+    
 Output:
     Changes current directory, prints error on failure.
 --- */
@@ -59,10 +65,13 @@ void handle_cd(char **argv, char *envp[]) {
 
 /* ---
 Function Name: myatoi
+
 Purpose:
     Converts a string to an integer.
+    
 Input:
     s - input string
+    
 Output:
     Integer representation of the string.
 --- */
@@ -81,10 +90,13 @@ int myatoi(const char *s) {
 
 /* ---
 Function Name: handle_exit
+
 Purpose:
     Implements the 'exit' builtin command.
+    
 Input:
     argv - argument list
+    
 Output:
     Exits the shell process with the provided status.
 --- */
@@ -97,11 +109,14 @@ void handle_exit(char **argv) {
 
 /* ---
 Function Name: handle_export
+
 Purpose:
     Implements 'export' command using manual envp updates.
+    
 Input:
     argv - argument list ("VAR=value")
     envp - environment variable array
+    
 Output:
     Adds or updates the environment variable.
 --- */
@@ -164,11 +179,14 @@ void handle_export(char **argv, char *envp[]) {
 
 /* ---
 Function Name: int_to_str
+
 Purpose:
     Converts an integer to a string.
+    
 Input:
     n - integer
     buf - output buffer
+    
 Output:
     String representation of n stored in buf.
 --- */
@@ -202,11 +220,14 @@ void int_to_str(int n, char *buf) {
 
 /* ---
 Function Name: expand_variables
+
 Purpose:
     Expands $VAR and $? in argument list.
+    
 Input:
     argv - argument list
     envp - environment variables
+    
 Output:
     Modifies argv in place with expanded values.
 --- */
@@ -228,10 +249,13 @@ void expand_variables(char **argv, char *envp[]) {
 
 /* ---
 Function Name: builtin_fg
+
 Purpose:
     Brings the most recent background job to the foreground.
+    
 Input:
     argv - unused argument list
+    
 Output:
     Transfers terminal control and waits for job completion.
 --- */
@@ -249,10 +273,13 @@ void builtin_fg(char **argv) {
 
 /* ---
 Function Name: builtin_bg
+
 Purpose:
     Resumes the most recent stopped job in the background.
+    
 Input:
     argv - unused argument list
+    
 Output:
     Sends SIGCONT to the job’s process group.
 --- */
