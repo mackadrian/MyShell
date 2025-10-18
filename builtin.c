@@ -127,7 +127,7 @@ void handle_export(char **argv, char *envp[]) {
     while (argv[JOB_OFFSET_INDEX][i] && argv[1][i] != ENV_ASSIGN_CHAR) i++;
     if (!argv[JOB_OFFSET_INDEX][i]) return;
 
-    argv[1][i] = ENV_TERMINATOR_NULL;
+    argv[JOB_OFFSET_INDEX][i] = ENV_TERMINATOR_NULL;
     char *var = argv[JOB_OFFSET_INDEX];
     char *val = argv[JOB_OFFSET_INDEX] + i + JOB_OFFSET_INDEX;
 
@@ -154,8 +154,8 @@ void handle_export(char **argv, char *envp[]) {
             mystrcpy(new_entry, var);
             mystrcat(new_entry, ASSIGN_EQUAL);
             mystrcat(new_entry, val);
-            envp[e + 1] = new_entry;
-            envp[e + 2] = NULL;
+            envp[e + JOB_OFFSET_INDEX] = new_entry;
+            envp[e + ENV_STRING_EXTRA] = NULL;
             return;
         }
     }
@@ -194,7 +194,7 @@ void int_to_str(int n, char *buf) {
     int i = INITIAL_INDEX, start;
     if (n == ZERO_VALUE) { 
         buf[INITIAL_INDEX] = ZERO_CHAR; 
-        buf[1] = NULL_CHAR; 
+        buf[INITIAL_INDEX + 1] = NULL_CHAR; 
         return; 
     }
 
