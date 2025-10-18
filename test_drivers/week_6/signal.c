@@ -5,6 +5,21 @@
 
 volatile sig_atomic_t fg_job_running = 0;
 
+/* ---
+Function Name: handle_signal
+
+Purpose:
+  Handles shell signal events. Specifically responds to SIGINT (Ctrl+C).
+  If a foreground job is currently running, it writes a newline to 
+  maintain proper output formatting. If no job is active, it prints
+  the shell prompt again to restore user control.
+
+Input:
+  sig - integer signal value (e.g., SIGINT)
+
+Output:
+  Writes either a newline or the shell prompt to standard output.
+--- */
 void handle_signal(int sig)
 {
     if (sig == SIGINT) {
@@ -20,15 +35,15 @@ void handle_signal(int sig)
 Function Name: initialize_signal_handler
 
 Purpose:
-  Installs the shell's signal handlers. Handles Ctrl+C (SIGINT)
-  with handle_signal, and ignores Ctrl+Z (SIGTSTP) to prevent
-  background suspension of the shell.
+  Installs the shell's signal handlers. Configures SIGINT (Ctrl+C)
+  to trigger the handle_signal function and ignores SIGTSTP (Ctrl+Z)
+  to prevent accidental suspension of the shell itself.
 
 Input:
   None
 
 Output:
-  None
+  Registers the handlers for SIGINT and SIGTSTP.
 --- */
 void initialize_signal_handler()
 {
