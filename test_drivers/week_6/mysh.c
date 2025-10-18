@@ -23,7 +23,7 @@ arc  - number of command-line arguments
 argv - array of command-line argument strings
 envp - array of environment variable strings
 
-Output: returns 0 upon successful execution
+Returns EXIT_SUCCESS upon normal shell termination.
 --- */
 int main(int argc, char *argv[], char *envp[])
 {
@@ -36,13 +36,14 @@ int main(int argc, char *argv[], char *envp[])
     while (!exitShell) {
         remove_zombies();
 
+        /* Ignore empty input lines*/
         if (job.num_stages == FALSE_VALUE) {
             get_job(&job);
             continue;
         }
 
         expand_variables(job.pipeline[FALSE_VALUE].argv, envp);
-
+        /* Built-in Exit */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "exit") == FALSE_VALUE) {
             int status = FALSE_VALUE;
             if (job.pipeline[FALSE_VALUE].argv[TRUE_VALUE])
@@ -50,25 +51,25 @@ int main(int argc, char *argv[], char *envp[])
             free_all();
             _exit(status);
         }
-
+        /* Built-in cd */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "cd") == FALSE_VALUE) {
             handle_cd(job.pipeline[FALSE_VALUE].argv, envp);
             get_job(&job);
             continue;
         }
-
+        /* Built-in export */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "export") == FALSE_VALUE) {
             handle_export(job.pipeline[FALSE_VALUE].argv, envp);
             get_job(&job);
             continue;
         }
-
+        /* Built-in fg */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "fg") == FALSE_VALUE) {
             builtin_fg(NULL_PTR);
             get_job(&job);
             continue;
         }
-
+        /* Built-in bg */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "bg") == FALSE_VALUE) {
             builtin_bg(NULL_PTR);
             get_job(&job);
@@ -87,16 +88,16 @@ int main(int argc, char *argv[], char *envp[])
 /* ---
 Function Name: remove_zombies
 
-Purpose: 
-  Reaps any terminated child processes to prevent zombie processes
-  from accumulating. Uses a non-blocking wait to clean up all children
-  that have exited.
+Purpose:
+  Reaps any terminated child processes to prevent accumulation of
+  zombie processes. Uses a non-blocking waitpid() call to continuously
+  clean up background jobs that have completed.
 
 Input:
   None
 
 Output:
-  None
+  Reclaims resources of finished child processes.
 --- */
 static void remove_zombies(void)
 {
@@ -104,6 +105,21 @@ static void remove_zombies(void)
     while (waitpid(WAIT_ANY_CHILD, &status, WNOHANG) > FALSE_VALUE) {}
 }
 
+/* ---
+Function Name: sigchld_handler
+
+Purpose:
+  Handles the SIGCHLD signal, which is sent to the parent process
+  whenever a child process changes state (exits, stops, or continues).
+  Ensures that all child processes are properly reaped without blocking
+  the shell.
+
+Input:
+  sig - integer representing the caught signal (expected: SIGCHLD)
+
+Output:
+  Cleans up child processes using non-blocking waitpid().
+--- */
 static void sigchld_handler(int sig)
 {
     int status;
