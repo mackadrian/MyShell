@@ -4,10 +4,13 @@
 
 /* ---
 Function Name: print_error
+
 Purpose:
     Prints a descriptive error message corresponding to the provided ErrorCode.
+    
 Input:
     code - an enum value representing the specific error to print
+    
 Output:
     Writes the error message to standard error (STD_ERR). If the code
     is invalid or has no associated message, nothing is printed.
