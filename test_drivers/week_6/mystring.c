@@ -13,12 +13,12 @@ Output:
 --- */
 unsigned int mystrlen(const char *s)
 {
-  int len = 0;
-  while (s[len] != '\0')
+    int len = ZERO_VALUE;
+    while (s[len] != NULL_CHAR)
     {
-    len++;
+        len++;
     }
-  return len;
+    return len;
 }
 
 /* ---
@@ -38,15 +38,14 @@ Output:
 --- */
 int mystrcmp(const char *s1, const char *s2)
 {
-  while (*s1 && (*s1 == *s2))
+    while (*s1 && (*s1 == *s2))
     {
-      s1++;
-      s2++;
+        s1++;
+        s2++;
     }
 
-  int str_compare = (unsigned char)*s1 - (unsigned char)*s2;
-  
-  return str_compare;
+    int str_compare = (unsigned char)*s1 - (unsigned char)*s2;
+    return str_compare;
 }
 
 /* ---
@@ -63,13 +62,13 @@ Output:
 --- */
 char *mystrcpy(char *dest, const char *src)
 {
-  char *ptr = dest;
-  while (*src)
+    char *ptr = dest;
+    while (*src)
     {
-      *ptr++ = *src++;
+        *ptr++ = *src++;
     }
-  *ptr = '\0';
-  return dest;
+    *ptr = NULL_CHAR;
+    return dest;
 }
 
 /* ---
@@ -88,19 +87,19 @@ char *mystrcat(char *dest, const char *src)
 {
     char *ptr = dest;
 
-    while (*ptr != '\0') 
+    while (*ptr != NULL_CHAR)
     {
         ptr++;
     }
 
-    while (*src != '\0') 
+    while (*src != NULL_CHAR)
     {
         *ptr = *src;
         ptr++;
         src++;
     }
 
-    *ptr = '\0';
+    *ptr = NULL_CHAR;
 
     return dest;
 }
