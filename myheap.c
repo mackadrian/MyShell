@@ -1,8 +1,5 @@
 #include "myheap.h"
 
-
-#define HEAP_SIZE 10000     /* adjust as necessary */
-
 static char heap[HEAP_SIZE];
 static char *freep = heap;
 
@@ -14,6 +11,7 @@ Purpose:
 
 Input:
   size - number of bytes to allocate
+  
 Output:
   p - pointer to the allocated memory block
       returns NULL if not enough space is available
@@ -38,10 +36,12 @@ Purpose:
 
 Input:
   none
+  
 Output:
-  none
+  All previously allocated memory from the custom heap is invalidated and cleared.
 --- */
 void free_all()
 {
   freep = heap;
 }
+

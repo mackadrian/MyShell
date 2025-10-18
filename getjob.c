@@ -27,162 +27,354 @@ Output:
 --- */
 void get_job(Job *job)
 {
-    /* reset job structure */
     set_job(job);
-
-    char *command_buffer = alloc(MAX_ARGS);
     write(STDOUT_FILENO, SHELL, mystrlen(SHELL));
 
-    int bytes_read = read(STDIN_FILENO, command_buffer, MAX_ARGS);
-    if (bytes_read < 0) {
-        print_error(ERR_EXEC_FAIL);
-        return;
-    }
-    if (bytes_read == 0) {
-        /* EOF pressed, treat as empty input */
-        free_all();
-        return;
-    }
+    char *command_buffer = alloc(MAX_ARGS);
+    if (!command_buffer) return;
 
-    /* remove trailing newline if present */
-    if (command_buffer[bytes_read - 1] == '\n') {
-        command_buffer[bytes_read - 1] = '\0';
-    } else {
-        command_buffer[bytes_read] = '\0';
+    int bytes_read = read_line_from_stdin(command_buffer, MAX_ARGS);
+    if (bytes_read <= ZERO_VALUE) return;
+
+    normalize_newlines(command_buffer);
+    int start = skip_leading_whitespace(command_buffer);
+    if (command_buffer[start] == NULL_CHAR) return;
+
+    handle_background(job, command_buffer);
+    parse_pipeline(job, command_buffer, start);
+}
+
+
+/* ---
+Function Name: normalize_newlines
+
+Purpose:
+    Replaces internal '\n' with spaces to avoid breaking parser
+    
+Input:
+    buffer - null-terminated command string
+    
+Output:
+    Modifies buffer in place
+--- */
+static void normalize_newlines(char *buffer)
+{
+    for (int i = ZERO_VALUE; buffer[i] != NULL_CHAR; i++) {
+        if (buffer[i] == NEWLINE_CHAR)
+            buffer[i] = SPACE_CHAR;
     }
+}
 
-    /* skip leading whitespace */
-    int start = 0;
-    while (command_buffer[start] == ' ' || command_buffer[start] == '\t')
-        start++;
 
-    if (command_buffer[start] == '\0') {
-        /* empty input */
-        free_all();
-        return;
+/* ---
+Function Name: trim_newline
+
+Purpose:
+    Removes trailing newline from buffer if present
+    
+Input:
+    buffer - input buffer
+    bytes_read - number of bytes read
+    
+Output:
+    Modifies buffer in place
+--- */
+static void trim_newline(char *buffer, int bytes_read)
+{
+    if (bytes_read <= ZERO_VALUE) return;
+    if (buffer[bytes_read - TRUE_VALUE] == NEWLINE_CHAR)
+        buffer[bytes_read - TRUE_VALUE] = NULL_CHAR;
+    else
+        buffer[bytes_read] = NULL_CHAR;
+}
+
+/* ---
+Function Name: skip_leading_whitespace
+
+Purpose:
+    Returns the index of the first non-whitespace character
+    
+Input:
+    buffer - input string
+    
+Output:
+    index of first non-space/tab character
+--- */
+static int skip_leading_whitespace(char *buffer)
+{
+    int i = ZERO_VALUE;
+    while (buffer[i] == SPACE_CHAR || buffer[i] == TAB_CHAR) i++;
+    return i;
+}
+
+/* ---
+Function Name: handle_background
+
+Purpose:
+    Detects trailing '&' and sets the Job's background flag
+    
+Input:
+    job - pointer to Job structure
+    buffer - command buffer
+    
+Output:
+    Modifies job and buffer in place
+--- */
+static void handle_background(Job *job, char *buffer)
+{
+    int len = mystrlen(buffer);
+    if (len > ZERO_VALUE && buffer[len - TRUE_VALUE] == BACKGROUND_CHAR) {
+        job->background = TRUE_VALUE;
+        buffer[len - TRUE_VALUE] = NULL_CHAR;
     }
+}
 
-    /* check for background execution (&) */
-    int len = mystrlen(command_buffer);
-    if (len > 0 && command_buffer[len - 1] == '&') {
-        job->background = 1;
-        command_buffer[len - 1] = '\0';
-    }
+/* ---
+Function Name: parse_pipeline
 
-    /* parse pipeline stages separated by '|' */
+Purpose:
+    Splits command buffer into pipeline stages separated by '|', trims
+    whitespace and newlines, and calls parse_stage for each stage.
+    Safely handles empty stages and avoids infinite loops for malformed input.
+    
+Input:
+    job    - pointer to Job structure to populate
+    buffer - command buffer to parse
+    start  - starting index of first stage
+    
+Output:
+    Populates job->pipeline and job->num_stages
+--- */
+static void parse_pipeline(Job *job, char *buffer, int start)
+{
     int stage_start = start;
+
     for (int i = start;; i++) {
-        char c = command_buffer[i];
+        char c = buffer[i];
 
-        if (c == '|' || c == '\0') {
-            command_buffer[i] = '\0';
+        if (c == PIPE_CHAR || c == NULL_CHAR) {
+            buffer[i] = NULL_CHAR;
 
-            /* skip leading whitespace in this stage */
-            while (command_buffer[stage_start] == ' ' || command_buffer[stage_start] == '\t')
+            while (buffer[stage_start] == SPACE_CHAR ||
+                   buffer[stage_start] == TAB_CHAR ||
+                   buffer[stage_start] == NEWLINE_CHAR)
                 stage_start++;
 
-            if (command_buffer[stage_start] != '\0') {
-                parse_stage(&job->pipeline[job->num_stages],
-                            &command_buffer[stage_start],
-                            job);
+            if (buffer[stage_start] != NULL_CHAR) {
+                parse_stage(&job->pipeline[job->num_stages], &buffer[stage_start], job);
                 job->num_stages++;
             }
 
-            if (c == '\0')
-                break;
-
-            stage_start = i + 1;
+            if (c == NULL_CHAR) break;
+            stage_start = i + TRUE_VALUE;
         }
     }
-
-    /* NOTE: do NOT call free_all() here — call it after run_job() in your shell loop */
 }
 
 
 /* ---
 Function Name: parse_stage
 
-Purpose: 
-  Tokenizes a single stage of a pipeline command string into individual 
-  arguments and stores them in the provided Command structure. It also 
-  detects input/output redirection symbols ('<' and '>') and updates 
-  the Job structure accordingly. Only normal command arguments are 
-  added to argv.
-
+Purpose:
+    Tokenizes a single stage of a pipeline command into arguments,
+    input/output redirection. Uses helper functions to handle each
+    type of token.
+    
 Input:
-  cmd       - pointer to a Command structure to store the parsed arguments.
-  stage_str - pointer to a null-terminated string representing one stage 
-              of a pipeline (a single command and its arguments).
-  job       - pointer to the Job structure to set infile_path/outfile_path.
-
+    cmd - pointer to Command structure
+    stage_str - null-terminated stage string
+    job - pointer to Job structure
+    
 Output:
-  Populates the Command structure with parsed arguments and sets the 
-  argument count (argc). Updates job->infile_path and job->outfile_path.
-  The argv array is null-terminated.
+    Populates cmd->argv, cmd->argc, job->infile_path, and job->outfile_path
 --- */
 void parse_stage(Command *cmd, char *stage_str, Job *job)
 {
-    cmd->argc = 0;
-    int i = 0;
+    cmd->argc = ZERO_VALUE;
+    int i = ZERO_VALUE;
 
-    while (stage_str[i] != '\0') {
-        /* skip whitespace */
-        while (stage_str[i] == ' ' || stage_str[i] == '\t')
-            i++;
-        if (stage_str[i] == '\0')
-            break;
+    while (stage_str[i] != NULL_CHAR) {
+        while (stage_str[i] == SPACE_CHAR || stage_str[i] == TAB_CHAR) i++;
+        if (stage_str[i] == NULL_CHAR) break;
 
         int start = i;
-        while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-            i++;
+        while (stage_str[i] != SPACE_CHAR && stage_str[i] != TAB_CHAR && stage_str[i] != NULL_CHAR) i++;
 
-        char *token = &stage_str[start];
-        if (stage_str[i] != '\0')
-            stage_str[i++] = '\0';
+        int tok_len = i - start;
+        char *token = alloc(tok_len + TRUE_VALUE);
+        for (int j = ZERO_VALUE; j < tok_len; j++) token[j] = stage_str[start + j];
+        token[tok_len] = NULL_CHAR;
 
-        /* handle input redirection */
-        if (mystrcmp(token, "<") == 0) {
-            while (stage_str[i] == ' ' || stage_str[i] == '\t')
-                i++;
-            start = i;
-            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-                i++;
-            if (stage_str[i] != '\0') stage_str[i++] = '\0';
-            job->infile_path = &stage_str[start];
+        if (mystrcmp(token, "<") == ZERO_VALUE) {
+            parse_input_redirection(job, stage_str, &i);
+        } else if (mystrcmp(token, ">") == ZERO_VALUE) {
+            parse_output_redirection(job, stage_str, &i);
+        } else {
+            parse_argument(cmd, token);
         }
-        /* handle output redirection */
-        else if (mystrcmp(token, ">") == 0) {
-            while (stage_str[i] == ' ' || stage_str[i] == '\t')
-                i++;
-            start = i;
-            while (stage_str[i] != ' ' && stage_str[i] != '\t' && stage_str[i] != '\0')
-                i++;
-            if (stage_str[i] != '\0') stage_str[i++] = '\0';
-            job->outfile_path = &stage_str[start];
-        }
-        /* normal argument */
-        else {
-            cmd->argv[cmd->argc++] = token;
-        }
+
+        if (stage_str[i] != NULL_CHAR) i++;
     }
 
     cmd->argv[cmd->argc] = NULL;
 }
 
+
+/* ---
+Function Name: parse_argument
+
+Purpose:
+    Adds a normal argument token to the Command structure.
+    
+Input:
+    cmd - pointer to Command structure
+    token - argument string
+    
+Output:
+    Updates cmd->argv and cmd->argc
+--- */
+static void parse_argument(Command *cmd, char *token)
+{
+    cmd->argv[cmd->argc++] = token;
+}
+
+/* ---
+Function Name: parse_input_redirection
+
+Purpose:
+    Parses an input redirection token ('< infile') and updates Job infile_path.
+    
+Input:
+    job - pointer to Job structure
+    stage_str - stage string containing redirection
+    i - pointer to current index in stage_str; updated after parsing
+    
+Output:
+    Sets job->infile_path
+--- */
+static void parse_input_redirection(Job *job, char *stage_str, int *i)
+{
+    while (stage_str[*i] == SPACE_CHAR || stage_str[*i] == TAB_CHAR) (*i)++;
+    int start = *i;
+    while (stage_str[*i] != SPACE_CHAR && stage_str[*i] != TAB_CHAR && stage_str[*i] != NULL_CHAR) (*i)++;
+    int len = *i - start;
+    char *path = alloc(len + TRUE_VALUE);
+    for (int j = ZERO_VALUE; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = NULL_CHAR;
+    job->infile_path = path;
+
+    if (stage_str[*i] != NULL_CHAR) (*i)++;
+}
+
+/* ---
+Function Name: parse_output_redirection
+
+Purpose:
+    Parses an output redirection token ('> outfile') and updates Job outfile_path.
+    
+Input:
+    job - pointer to Job structure
+    stage_str - stage string containing redirection
+    i - pointer to current index in stage_str; updated after parsing
+    
+Output:
+    Sets job->outfile_path
+--- */
+static void parse_output_redirection(Job *job, char *stage_str, int *i)
+{
+    while (stage_str[*i] == SPACE_CHAR || stage_str[*i] == TAB_CHAR) (*i)++;
+    int start = *i;
+    while (stage_str[*i] != SPACE_CHAR && stage_str[*i] != TAB_CHAR && stage_str[*i] != NULL_CHAR) (*i)++;
+    int len = *i - start;
+    char *path = alloc(len + TRUE_VALUE);
+    for (int j = ZERO_VALUE; j < len; j++) path[j] = stage_str[start + j];
+    path[len] = NULL_CHAR;
+    job->outfile_path = path;
+
+    if (stage_str[*i] != NULL_CHAR) (*i)++;
+}
+
+
 /* --- 
 Function Name: set_job
+
 Purpose: 
     Resets all fields of a Job structure to their default/empty state.
+    
 Input:
     job - pointer to a Job structure
+    
 Output:
     job fields are reset
 --- */
 void set_job(Job *job)
 {
-    job->num_stages = 0;
-    job->background = 0;
+    job->num_stages = ZERO_VALUE;
+    job->background = ZERO_VALUE;
     job->infile_path = NULL;
     job->outfile_path = NULL;
+}
 
+/* --- 
+Function Name: check_read_status
+
+Purpose: 
+    Checks bytes_read and prints error if negative or exceeds MAX_ARGS
+    
+Input:
+    bytes_read - result of read()
+    
+Output:
+    Returns 0 if OK, -1 if error
+--- */
+int check_read_status(int bytes_read)
+{
+    int exit_status = ZERO_VALUE;
+
+    if (bytes_read < ZERO_VALUE) {
+        exit_status = ERROR_CODE;
+    } else if (bytes_read > MAX_ARGS) {
+        print_error(ERR_ARG_EXCD);
+        exit_status = ERROR_CODE;
+    } else if (bytes_read > ZERO_VALUE) {
+        free_all();
+    }
+
+    return exit_status;
+}
+/* ---
+Function Name: read_line_from_stdin
+
+Purpose:
+    Reads one line from stdin (up to newline or EOF) using system calls only.
+    
+Input:
+    buffer - destination buffer
+    maxlen - maximum bytes to read (including null terminator)
+    
+Output:
+    Returns number of bytes read (excluding null terminator), 
+    0 on EOF, or -1 on error.
+--- */
+static int read_line_from_stdin(char *buffer, int maxlen)
+{
+    int total = ZERO_VALUE;
+    char c;
+
+    while (total < maxlen - TRUE_VALUE) {
+        int n = read(STDIN_FILENO, &c, READ_BYTE_COUNT);
+
+        if (n == ZERO_VALUE) {
+            break;
+        } else if (n < ZERO_VALUE) {
+            return ERROR_CODE;
+        } else if (c == NEWLINE_CHAR) {
+            break;
+        }
+
+        buffer[total++] = c;
+    }
+
+    buffer[total] = NULL_CHAR;
+    return total;
 }

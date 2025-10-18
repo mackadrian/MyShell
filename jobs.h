@@ -3,6 +3,7 @@
 
 #define MAX_ARGS 1024
 #define MAX_PIPELINE_LEN 10
+#define MAX_JOBS 16
 
 typedef struct
 {
@@ -17,6 +18,7 @@ typedef struct
   char *outfile_path;
   char *infile_path;
   int background;
+  int pgid;
 } Job;
 
 #endif

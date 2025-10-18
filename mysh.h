@@ -11,6 +11,13 @@
 #define STD_OUT 1
 #define STD_ERR 2
 
-void remove_zombies();
+#define FALSE_VALUE             0
+#define TRUE_VALUE              1
+#define WAIT_ANY_CHILD          (-1)
+#define NULL_PTR                ((char **)0)
+
+extern int fg_job_status;
+
+static void remove_zombies();
 
 #endif
