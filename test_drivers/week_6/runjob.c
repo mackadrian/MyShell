@@ -11,11 +11,14 @@
 
 /* ---
 Function Name: run_job
+
 Purpose:
     Executes a Job structure, handling pipelines, redirection, and background jobs.
+    
 Input:
     job - pointer to Job structure
     envp - environment variables
+    
 Output:
     Executes all stages of the job. Waits for foreground jobs; prints info for background jobs.
 --- */
@@ -67,14 +70,18 @@ void run_job(Job *job, char *envp[])
     free_all();
 }
 
+
 /* ---
 Function Name: build_fullpath
+
 Purpose:
     Concatenates a directory path and a command into a single path buffer.
+    
 Input:
     buf - output buffer
     dir - directory path
     cmd - command name
+    
 Output:
     Stores the full path in buf.
 --- */
@@ -89,14 +96,16 @@ static void build_fullpath(char *buf, const char *dir, const char *cmd)
 }
 
 
-
 /* --- 
 Function Name: resolve_command_path
+
 Purpose:
   Resolves the full path of a command using the PATH environment variable.
+  
 Input:
   cmd - command name
   envp - environment variables
+  
 Output:
   Returns a heap-allocated string containing the command’s full path if found,
   or NULL if not found.
@@ -164,11 +173,14 @@ char* resolve_command_path(const char *cmd, char *envp[])
 
 /* ---
 Function Name: create_pipes
+
 Purpose:
     Creates pipes for inter-process communication between pipeline stages.
+    
 Input:
     pipefd - 2D array to hold file descriptors
     num_stages - number of stages in pipeline
+    
 Output:
     Initializes pipefd. Prints error if pipe creation fails.
 --- */
@@ -182,13 +194,16 @@ static void create_pipes(int pipefd[MAX_PIPELINE_LEN - 1][2], int num_stages)
 
 /* ---
 Function Name: setup_redirection
+
 Purpose:
     Handles I/O redirection for each stage in the pipeline.
+    
 Input:
     stage_index - index of the current stage
     num_stages - total number of stages
     job - pointer to Job structure
     pipefd - 2D array of pipe file descriptors
+    
 Output:
     Sets up file descriptors appropriately for input/output.
 --- */
@@ -222,13 +237,16 @@ static void setup_redirection(int stage_index, int num_stages, Job *job,
 
 /* ---
 Function Name: fork_and_execute_stage
+
 Purpose:
     Forks and executes a command stage in the pipeline.
+    
 Input:
     stage_index - index of current stage
     job - pointer to Job structure
     envp - environment variables
     pipefd - 2D array of pipe file descriptors
+    
 Output:
     Executes the command in a child and returns its PID.
 --- */
@@ -270,11 +288,14 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
 
 /* ---
 Function Name: print_background_pid
+
 Purpose:
     Displays background job process ID.
+    
 Input:
     job - pointer to Job structure
     pid - process ID of first command in pipeline
+    
 Output:
     Prints background job info to STDOUT.
 --- */
