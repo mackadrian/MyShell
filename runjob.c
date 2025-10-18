@@ -8,6 +8,7 @@
 #include <sys/wait.h>  /* waitpid */
 #include <sys/stat.h>  /* stat */
 #include <fcntl.h>     /* open, creat */
+#include <errno.h>
 
 /* ---
 Function Name: run_job
@@ -52,21 +53,57 @@ void run_job(Job *job, char *envp[])
 	add_job(job, pids[ZERO_VALUE]);
         fg_job_running = ZERO_VALUE;
     } else {
-        int status;
-        for (int i = ZERO_VALUE; i < job->num_stages; i++) {
-            waitpid(pids[i], &status, ZERO_VALUE);
-            if (i == job->num_stages - TRUE_VALUE) {
-                if (WIFEXITED(status))
-                    fg_job_status = WEXITSTATUS(status);
-                else
-                    fg_job_status = EXIT_FAILURE_CODE;
-            }
+    int status;
 
-            if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
+    /* Allow the foreground job to receive Ctrl+Z and Ctrl+C */
+    signal(SIGTSTP, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+
+    /* Give the terminal to the job's process group */
+    signal(SIGTTOU, SIG_IGN);               // prevent blocking on tcsetpgrp
+    tcsetpgrp(STDIN_FILENO, pids[ZERO_VALUE]);
+
+    fg_job_running = TRUE_VALUE;
+
+    /* Wait for the job to finish or stop */
+    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
+        while (waitpid(pids[i], &status, WUNTRACED) == -1 && errno == EINTR)
+            continue;
+
+        if (WIFEXITED(status)) {
+            fg_job_status = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            fg_job_status = EXIT_FAILURE_CODE;
+            if (WTERMSIG(status) == SIGINT)
                 break;
+        } else if (WIFSTOPPED(status)) {
+            /* Handle Ctrl+Z stopping the foreground job */
+            add_job(job, pids[i]);
+            jobs[num_jobs - 1].background = 0;
+
+            write(STDOUT_FILENO, "[", 1);
+            char buf[8];
+            myitoa(num_jobs, buf);
+            write(STDOUT_FILENO, buf, mystrlen(buf));
+            write(STDOUT_FILENO, "] Stopped\t", 10);
+            write(STDOUT_FILENO, job->pipeline[0].argv[0],
+                  mystrlen(job->pipeline[0].argv[0]));
+            write(STDOUT_FILENO, "\n", 1);
+	    fsync(STDOUT_FILENO);
+            break;
         }
-        fg_job_running = ZERO_VALUE;
     }
+
+    /* Return terminal control to the shell */
+    tcsetpgrp(STDIN_FILENO, getpgrp());
+    signal(SIGTTOU, SIG_DFL);
+
+    /* Shell should ignore Ctrl+Z again */
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGINT, handle_signal);
+
+    fg_job_running = ZERO_VALUE;
+}
 
     free_all();
 }

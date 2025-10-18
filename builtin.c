@@ -311,10 +311,24 @@ void builtin_fg(char **argv) {
     Job *job = &jobs[num_jobs - 1];
     if (job->pgid <= INVALID_PGID) return;
 
+    /* Move job to foreground */
     tcsetpgrp(STDIN_FILENO, job->pgid);
+
+    /* Resume stopped job */
     kill(-job->pgid, SIGCONT);
+    job->background = 0;
+
     int status;
-    waitpid(-job->pgid, &status, WUNTRACED);
+    while (waitpid(-job->pgid, &status, WUNTRACED) > 0) {
+        if (WIFSTOPPED(status)) {
+            write(STDOUT_FILENO, "[FG stopped]\n", 13);
+            return;
+        }
+        if (WIFSIGNALED(status) || WIFEXITED(status))
+            break;
+    }
+
+    /* Restore terminal control to shell */
     tcsetpgrp(STDIN_FILENO, shell_pgid);
 }
 
@@ -334,5 +348,17 @@ void builtin_bg(char **argv) {
     if (num_jobs == NO_JOBS) return;
     Job *job = &jobs[num_jobs - 1];
     if (job->pgid <= INVALID_PGID) return;
+
+    /* Resume stopped job in background */
     kill(-job->pgid, SIGCONT);
+    job->background = 1;
+
+    write(STDOUT_FILENO, "[", 1);
+    char buf[8];
+    myitoa(num_jobs, buf);
+    write(STDOUT_FILENO, buf, mystrlen(buf));
+    write(STDOUT_FILENO, "] Running\t", 10);
+    write(STDOUT_FILENO, job->pipeline[0].argv[0],
+          mystrlen(job->pipeline[0].argv[0]));
+    write(STDOUT_FILENO, "\n", 1);
 }
