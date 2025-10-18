@@ -4,24 +4,30 @@
 #include "jobs.h"
 #include "mysh.h"
 
+// Numeric / Boolean Constants
 #define ZERO_VALUE              0
 #define TRUE_VALUE              1
 #define ERROR_CODE              -1
 #define EXIT_FAILURE_CODE       1
 #define EXIT_SUCCESS_CODE       0
 
+// Character / String Constants
 #define PATH_SEPARATOR          '/'
 #define PATH_DELIMITER          ':'
 #define NULL_CHAR               '\0'
 #define PATH_PREFIX_LEN         5
 #define DECIMAL_BASE            10
 
+// Sizes / Lengths
 #define MAX_PATH_LEN            1024
 #define FULLPATH_LEN            512
 #define MAX_MSG_LEN             128
 #define PID_STR_LEN             16
+
+// File / I/O
 #define FILE_PERMISSIONS        0644
 
+// Message Formatting
 #define BG_MSG_PREFIX           "[background pid "
 #define BG_MSG_SUFFIX           "] "
 #define NEWLINE_STR             "\n"
