@@ -247,6 +247,50 @@ void expand_variables(char **argv, char *envp[]) {
 }
 
 /* ---
+Function Name: handle_jobs
+
+Purpose:
+  Displays a list of active jobs currently stored in the global
+  jobs array. Each entry shows the job number, state, and command.
+
+Input:
+  argv - argument vector from user input (unused).
+
+Output:
+  Writes the job list to standard output.
+
+--- */
+void handle_jobs(char **argv)
+{
+    (void)argv;  /* avoid unused warning */
+
+    for (int jobIndex = 0; jobIndex < num_jobs; jobIndex++)
+    {
+        if (jobs[jobIndex].num_stages > 0)
+        {
+            const char *state = jobs[jobIndex].background
+                                    ? STATUS_RUNNING_TEXT
+                                    : STATUS_FOREGROUND_TEXT;
+
+            write(STDOUT_FILENO, "[", 1);
+
+            char idBuffer[JOB_DISPLAY_WIDTH];
+            myitoa(jobIndex + JOB_ID_OFFSET, idBuffer);
+            write(STDOUT_FILENO, idBuffer, mystrlen(idBuffer));
+
+            write(STDOUT_FILENO, "] ", 2);
+            write(STDOUT_FILENO, state, mystrlen(state));
+            write(STDOUT_FILENO, TERMINAL_TAB_CHAR, 1);
+
+            /* print command name for first stage */
+            write(STDOUT_FILENO, jobs[jobIndex].pipeline[0].argv[0],
+                  mystrlen(jobs[jobIndex].pipeline[0].argv[0]));
+            write(STDOUT_FILENO, JOB_NEWLINE_CHAR, 1);
+        }
+    }
+}
+
+/* ---
 Function Name: builtin_fg
 
 Purpose:

@@ -30,6 +30,10 @@ int main(int argc, char *argv[], char *envp[])
     Job job;
     int exitShell = FALSE_VALUE;
 
+    int shell_pgid = getpid();
+    setpgid(shell_pgid, shell_pgid);
+    tcsetpgrp(STDIN_FILENO, shell_pgid);
+    
     initialize_signal_handler();
     get_job(&job);
 
@@ -63,6 +67,11 @@ int main(int argc, char *argv[], char *envp[])
             get_job(&job);
             continue;
         }
+	/* Built-in jobs*/
+	if (mystrcmp(argv[0], "jobs") == 0) {
+	  handle_jobs(argv);
+	  continue;
+	}
         /* Built-in fg */
         if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "fg") == FALSE_VALUE) {
             builtin_fg(NULL_PTR);

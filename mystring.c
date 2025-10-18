@@ -103,3 +103,50 @@ char *mystrcat(char *dest, const char *src)
 
     return dest;
 }
+
+/* ---
+Function Name: myitoa
+
+Purpose:
+  Converts an integer value into its string representation.
+
+Input:
+  n   - integer number to convert
+  buf - character buffer to hold resulting string (must be large enough)
+
+Output:
+  Populates buf with the integer as a string and null terminator.
+--- */
+void myitoa(int n, char *buf)
+{
+    int i = 0;
+    int is_negative = 0;
+
+    if (n == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return;
+    }
+
+    if (n < 0) {
+        is_negative = 1;
+        n = -n;
+    }
+
+    while (n > 0) {
+        buf[i++] = (n % 10) + '0';
+        n /= 10;
+    }
+
+    if (is_negative)
+        buf[i++] = '-';
+
+    buf[i] = '\0';
+
+    // Reverse string in place
+    for (int j = 0; j < i / 2; j++) {
+        char temp = buf[j];
+        buf[j] = buf[i - j - 1];
+        buf[i - j - 1] = temp;
+    }
+}
