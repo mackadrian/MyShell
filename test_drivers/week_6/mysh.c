@@ -103,3 +103,10 @@ static void remove_zombies(void)
     int status;
     while (waitpid(WAIT_ANY_CHILD, &status, WNOHANG) > FALSE_VALUE) {}
 }
+
+static void sigchld_handler(int sig)
+{
+    int status;
+    int pid;
+    while ((pid = waitpid(WAIT_ANY_CHILD, &status, WNOHANG | WUNTRACED | WCONTINUED)) > FALSE_VALUE) {}
+}
