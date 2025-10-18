@@ -35,7 +35,6 @@ extern int last_exit_status;
 #define JOB_NEWLINE_CHAR      "\n"
 #define JOB_STRING_END        '\0'
 #define STATUS_RUNNING_TEXT   "Running"
-#define STATUS_FOREGROUND_TEXT "Foreground"
 #define STATUS_DONE_TEXT      "Done"
 #define STATUS_STOPPED_TEXT   "Stopped"
 
