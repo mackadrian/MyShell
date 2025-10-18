@@ -13,6 +13,7 @@
 extern volatile sig_atomic_t fg_job_running;
 
 void handle_signal(int sig);
+void initialize_signal_handler(void);
 static void sigchld_handler(int sig);
 
 #endif

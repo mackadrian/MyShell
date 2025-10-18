@@ -19,6 +19,5 @@
 extern int fg_job_status;
 
 static void remove_zombies();
-static void initialize_signal_handler();
 
 #endif

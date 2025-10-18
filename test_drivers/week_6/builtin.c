@@ -159,9 +159,8 @@ void handle_export(char **argv, char *envp[]) {
             return;
         }
     }
-}
 
-    // Append new variable if not found
+// Append new variable if not found
     for (int e = 0; envp[e]; e++) {
         if (!envp[e + 1]) {
             int len = mystrlen(var) + mystrlen(val) + 2;

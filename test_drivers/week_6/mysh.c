@@ -104,25 +104,3 @@ static void remove_zombies(void)
     int status;
     while (waitpid(WAIT_ANY_CHILD, &status, WNOHANG) > FALSE_VALUE) {}
 }
-
-/* ---
-Function Name: sigchld_handler
-
-Purpose:
-  Handles the SIGCHLD signal, which is sent to the parent process
-  whenever a child process changes state (exits, stops, or continues).
-  Ensures that all child processes are properly reaped without blocking
-  the shell.
-
-Input:
-  sig - integer representing the caught signal (expected: SIGCHLD)
-
-Output:
-  Cleans up child processes using non-blocking waitpid().
---- */
-static void sigchld_handler(int sig)
-{
-    int status;
-    int pid;
-    while ((pid = waitpid(WAIT_ANY_CHILD, &status, WNOHANG | WUNTRACED | WCONTINUED)) > FALSE_VALUE) {}
-}

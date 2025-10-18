@@ -2,6 +2,8 @@
 
 #include <signal.h> 
 #include <unistd.h> // write
+#include <sys/wait.h>
+
 
 volatile sig_atomic_t fg_job_running = 0;
 
@@ -52,5 +54,38 @@ void initialize_signal_handler()
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = NO_FLAGS;
     sigaction(SIGINT, &sa, NULL);   /* handle Ctrl+C */
+
+    // SIGCHLD handler
+    struct sigaction sa_chld;
+    sa_chld.sa_handler = sigchld_handler;
+    sigemptyset(&sa_chld.sa_mask);
+    sa_chld.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+    sigaction(SIGCHLD, &sa_chld, NULL);
+    
     signal(SIGTSTP, SIG_IGN);       /* ignore Ctrl+Z */
+}
+
+/* ---
+Function Name: sigchld_handler
+
+Purpose:
+  Handles the SIGCHLD signal, which is sent to the parent process
+  whenever a child process changes state (exits, stops, or continues).
+  Ensures that all child processes are properly reaped without blocking
+  the shell.
+
+Input:
+  sig - integer representing the caught signal (expected: SIGCHLD)
+
+Output:
+  Cleans up child processes using non-blocking waitpid().
+--- */
+static void sigchld_handler(int sig)
+{
+    int status;
+    int pid;
+    // Reap all terminated children
+    while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
+        // Optionally handle job status updates here
+    }
 }
