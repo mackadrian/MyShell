@@ -47,10 +47,13 @@ void get_job(Job *job)
 
 /* ---
 Function Name: normalize_newlines
+
 Purpose:
     Replaces internal '\n' with spaces to avoid breaking parser
+    
 Input:
     buffer - null-terminated command string
+    
 Output:
     Modifies buffer in place
 --- */
@@ -65,11 +68,14 @@ static void normalize_newlines(char *buffer)
 
 /* ---
 Function Name: trim_newline
+
 Purpose:
     Removes trailing newline from buffer if present
+    
 Input:
     buffer - input buffer
     bytes_read - number of bytes read
+    
 Output:
     Modifies buffer in place
 --- */
@@ -84,10 +90,13 @@ static void trim_newline(char *buffer, int bytes_read)
 
 /* ---
 Function Name: skip_leading_whitespace
+
 Purpose:
     Returns the index of the first non-whitespace character
+    
 Input:
     buffer - input string
+    
 Output:
     index of first non-space/tab character
 --- */
@@ -100,11 +109,14 @@ static int skip_leading_whitespace(char *buffer)
 
 /* ---
 Function Name: handle_background
+
 Purpose:
     Detects trailing '&' and sets the Job's background flag
+    
 Input:
     job - pointer to Job structure
     buffer - command buffer
+    
 Output:
     Modifies job and buffer in place
 --- */
@@ -119,14 +131,17 @@ static void handle_background(Job *job, char *buffer)
 
 /* ---
 Function Name: parse_pipeline
+
 Purpose:
     Splits command buffer into pipeline stages separated by '|', trims
     whitespace and newlines, and calls parse_stage for each stage.
     Safely handles empty stages and avoids infinite loops for malformed input.
+    
 Input:
     job    - pointer to Job structure to populate
     buffer - command buffer to parse
     start  - starting index of first stage
+    
 Output:
     Populates job->pipeline and job->num_stages
 --- */
@@ -159,14 +174,17 @@ static void parse_pipeline(Job *job, char *buffer, int start)
 
 /* ---
 Function Name: parse_stage
+
 Purpose:
     Tokenizes a single stage of a pipeline command into arguments,
     input/output redirection. Uses helper functions to handle each
     type of token.
+    
 Input:
     cmd - pointer to Command structure
     stage_str - null-terminated stage string
     job - pointer to Job structure
+    
 Output:
     Populates cmd->argv, cmd->argc, job->infile_path, and job->outfile_path
 --- */
@@ -204,11 +222,14 @@ void parse_stage(Command *cmd, char *stage_str, Job *job)
 
 /* ---
 Function Name: parse_argument
+
 Purpose:
     Adds a normal argument token to the Command structure.
+    
 Input:
     cmd - pointer to Command structure
     token - argument string
+    
 Output:
     Updates cmd->argv and cmd->argc
 --- */
@@ -219,12 +240,15 @@ static void parse_argument(Command *cmd, char *token)
 
 /* ---
 Function Name: parse_input_redirection
+
 Purpose:
     Parses an input redirection token ('< infile') and updates Job infile_path.
+    
 Input:
     job - pointer to Job structure
     stage_str - stage string containing redirection
     i - pointer to current index in stage_str; updated after parsing
+    
 Output:
     Sets job->infile_path
 --- */
@@ -244,12 +268,15 @@ static void parse_input_redirection(Job *job, char *stage_str, int *i)
 
 /* ---
 Function Name: parse_output_redirection
+
 Purpose:
     Parses an output redirection token ('> outfile') and updates Job outfile_path.
+    
 Input:
     job - pointer to Job structure
     stage_str - stage string containing redirection
     i - pointer to current index in stage_str; updated after parsing
+    
 Output:
     Sets job->outfile_path
 --- */
@@ -270,10 +297,13 @@ static void parse_output_redirection(Job *job, char *stage_str, int *i)
 
 /* --- 
 Function Name: set_job
+
 Purpose: 
     Resets all fields of a Job structure to their default/empty state.
+    
 Input:
     job - pointer to a Job structure
+    
 Output:
     job fields are reset
 --- */
@@ -287,10 +317,13 @@ void set_job(Job *job)
 
 /* --- 
 Function Name: check_read_status
+
 Purpose: 
     Checks bytes_read and prints error if negative or exceeds MAX_ARGS
+    
 Input:
     bytes_read - result of read()
+    
 Output:
     Returns 0 if OK, -1 if error
 --- */
@@ -311,11 +344,14 @@ int check_read_status(int bytes_read)
 }
 /* ---
 Function Name: read_line_from_stdin
+
 Purpose:
     Reads one line from stdin (up to newline or EOF) using system calls only.
+    
 Input:
     buffer - destination buffer
     maxlen - maximum bytes to read (including null terminator)
+    
 Output:
     Returns number of bytes read (excluding null terminator), 
     0 on EOF, or -1 on error.
