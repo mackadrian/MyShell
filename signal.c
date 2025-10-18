@@ -1,30 +1,67 @@
 #include "signal.h"
+#include "jobs.h"
+#include "mystring.h"
 
-#include <signal.h>    /* sig_atomic_t, sigaction, SIGINT, etc. */
-#include <unistd.h>    /* write() */
-#include <sys/wait.h>  /* waitpid() */
+#include <signal.h>
+#include <unistd.h>   // write()
+#include <sys/wait.h> // waitpid()
 
 volatile sig_atomic_t fg_job_running = 0;
+
+/* extern globals for background jobs */
+extern Job jobs[MAX_JOBS];
+extern int num_jobs;
+
+/* forward declaration */
+void sigchld_handler(int sig);
 
 /* ---
 Function Name: handle_signal
 
 Purpose:
-  Handles shell signal events. Specifically responds to SIGINT (Ctrl+C).
-  If a foreground job is currently running, it writes a newline to 
-  maintain proper output formatting. If no job is active, it prints
-  the shell prompt again to restore user control.
-
-Input:
-  sig - integer signal value (e.g., SIGINT)
-
-Output:
-  Writes either a newline or the shell prompt to standard output.
+  Handles shell signal events such as SIGINT (Ctrl+C).
+  If a foreground job is running, sends SIGINT to terminate it;
+  otherwise just prints a newline to maintain clean prompt output.
 --- */
 void handle_signal(int sig)
 {
-    if (sig == SIGINT) {
-        write(STDOUT_FILENO, NEWLINE_STR, NEWLINE_LEN);
+    if (sig == SIGINT)
+    {
+        write(STDOUT_FILENO, "\n", 1);
+    }
+}
+
+/* ---
+Function Name: sigchld_handler
+
+Purpose:
+  Handles the SIGCHLD signal when background processes change state.
+  This function reaps all finished child processes to prevent zombies
+  and updates the job list accordingly.
+--- */
+void sigchld_handler(int sig)
+{
+    (void)sig; // unused
+
+    int status;
+    pid_t pid;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        for (int i = 0; i < num_jobs; i++)
+        {
+            if (jobs[i].pgid == pid)
+            {
+                // mark as completed
+                jobs[i].background = 0;
+
+                write(STDOUT_FILENO, "[Job Done] ", 11);
+                write(STDOUT_FILENO, jobs[i].pipeline[0].argv[0],
+                      mystrlen(jobs[i].pipeline[0].argv[0]));
+                write(STDOUT_FILENO, "\n", 1);
+                break;
+            }
+        }
     }
 }
 
@@ -32,55 +69,24 @@ void handle_signal(int sig)
 Function Name: initialize_signal_handler
 
 Purpose:
-  Installs the shell's signal handlers. Configures SIGINT (Ctrl+C)
-  to trigger the handle_signal function and ignores SIGTSTP (Ctrl+Z)
-  to prevent accidental suspension of the shell itself.
-
-Input:
-  None
-
-Output:
-  Registers the handlers for SIGINT and SIGTSTP.
+  Installs all custom signal handlers:
+   - SIGINT (Ctrl+C)
+   - SIGTSTP (Ctrl+Z)
+   - SIGCHLD (background job notifications)
 --- */
 void initialize_signal_handler()
 {
-    struct sigaction sa;
-    sa.sa_handler = handle_signal;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = NO_FLAGS;
-    sigaction(SIGINT, &sa, NULL);   /* handle Ctrl+C */
+    struct sigaction sa_int;
+    sa_int.sa_handler = handle_signal;
+    sigemptyset(&sa_int.sa_mask);
+    sa_int.sa_flags = 0;
+    sigaction(SIGINT, &sa_int, NULL);
 
-    // SIGCHLD handler
     struct sigaction sa_chld;
     sa_chld.sa_handler = sigchld_handler;
     sigemptyset(&sa_chld.sa_mask);
     sa_chld.sa_flags = SA_RESTART | SA_NOCLDSTOP;
     sigaction(SIGCHLD, &sa_chld, NULL);
-    
-    signal(SIGTSTP, SIG_IGN);       /* ignore Ctrl+Z */
-}
 
-/* ---
-Function Name: sigchld_handler
-
-Purpose:
-  Handles the SIGCHLD signal, which is sent to the parent process
-  whenever a child process changes state (exits, stops, or continues).
-  Ensures that all child processes are properly reaped without blocking
-  the shell.
-
-Input:
-  sig - integer representing the caught signal (expected: SIGCHLD)
-
-Output:
-  Cleans up child processes using non-blocking waitpid().
---- */
-static void sigchld_handler(int sig)
-{
-    int status;
-    int pid;
-    // Reap all terminated children
-    while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
-        // Optionally handle job status updates here
-    }
+    signal(SIGTSTP, SIG_IGN); // ignore Ctrl+Z
 }

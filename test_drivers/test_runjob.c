@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+/* Dummy globals for unit testing */
+Job jobs[MAX_JOBS];
+int num_jobs = 0;
+
 // FUNCTION DECLARATIONS
 static void print_job(Job *job);
 static void set_test_job(Job *job);

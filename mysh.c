@@ -68,8 +68,9 @@ int main(int argc, char *argv[], char *envp[])
             continue;
         }
 	/* Built-in jobs*/
-	if (mystrcmp(argv[0], "jobs") == 0) {
-	  handle_jobs(argv);
+	if (mystrcmp(job.pipeline[0].argv[0], "jobs") == 0) {
+	  handle_jobs(job.pipeline[0].argv);
+	  get_job(&job);
 	  continue;
 	}
         /* Built-in fg */

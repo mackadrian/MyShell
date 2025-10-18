@@ -7,8 +7,8 @@ mysh: mysh.o mystring.o myheap.o runjob.o getjob.o errors.o signal.o builtin.o
 # ----------------------
 # Test drivers (executables in test_drivers/)
 # ----------------------
-test_drivers/test_getjob: test_drivers/test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o
-	gcc test_drivers/test_getjob.o mystring.o myheap.o getjob.o errors.o signal.o -o test_drivers/test_getjob
+test_drivers/test_getjob: test_drivers/test_getjob.o mystring.o myheap.o getjob.o errors.o
+	gcc test_drivers/test_getjob.o mystring.o myheap.o getjob.o errors.o -o test_drivers/test_getjob
 
 test_drivers/test_runjob: test_drivers/test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o
 	gcc test_drivers/test_runjob.o mystring.o myheap.o runjob.o errors.o signal.o -o test_drivers/test_runjob
