@@ -21,52 +21,47 @@ Output:
 --- */
 void run_job(Job *job, char *envp[])
 {
-
     int fg_job_status;
-    if (!job || job->num_stages == 0) return;
+    if (!job || job->num_stages == ZERO_VALUE) return;
 
     int pipefd[MAX_PIPELINE_LEN - 1][2];
     int pids[MAX_PIPELINE_LEN];
-
     int fg_job_running = !job->background;
 
     create_pipes(pipefd, job->num_stages);
 
-    /* Fork all stages */
-    for (int i = 0; i < job->num_stages; i++) {
+    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
         pids[i] = fork_and_execute_stage(i, job, envp, pipefd);
-        if (pids[i] < 0) {
-            fg_job_running = 0;
+        if (pids[i] < ZERO_VALUE) {
+            fg_job_running = ZERO_VALUE;
             free_all();
             return;
         }
     }
 
-    /* Parent closes all pipe ends */
-    for (int i = 0; i < job->num_stages - 1; i++) {
-        close(pipefd[i][0]);
-        close(pipefd[i][1]);
+    for (int i = ZERO_VALUE; i < job->num_stages - TRUE_VALUE; i++) {
+        close(pipefd[i][ZERO_VALUE]);
+        close(pipefd[i][TRUE_VALUE]);
     }
 
-    /* Foreground vs background handling */
     if (job->background) {
-        print_background_pid(job, pids[0]);
-        fg_job_running = 0;
+        print_background_pid(job, pids[ZERO_VALUE]);
+        fg_job_running = ZERO_VALUE;
     } else {
         int status;
-        for (int i = 0; i < job->num_stages; i++) {
-            waitpid(pids[i], &status, 0);
-	    if (i == job->num_stages -1) {
-	      if (WIFEXITED(status))
-		fg_job_status = WEXITSTATUS(status);
-	      else
-		fg_job_status = 1;
-	    }
-	    
+        for (int i = ZERO_VALUE; i < job->num_stages; i++) {
+            waitpid(pids[i], &status, ZERO_VALUE);
+            if (i == job->num_stages - TRUE_VALUE) {
+                if (WIFEXITED(status))
+                    fg_job_status = WEXITSTATUS(status);
+                else
+                    fg_job_status = EXIT_FAILURE_CODE;
+            }
+
             if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
                 break;
         }
-        fg_job_running = 0;
+        fg_job_running = ZERO_VALUE;
     }
 
     free_all();
@@ -83,13 +78,14 @@ Input:
 Output:
     Stores the full path in buf.
 --- */
-static void build_fullpath(char *buf, const char *dir, const char *cmd) {
-    int i = 0;
+static void build_fullpath(char *buf, const char *dir, const char *cmd)
+{
+    int i = ZERO_VALUE;
     while (dir[i]) { buf[i] = dir[i]; i++; }
-    buf[i++] = '/';
-    int j = 0;
+    buf[i++] = PATH_SEPARATOR;
+    int j = ZERO_VALUE;
     while (cmd[j]) buf[i++] = cmd[j++];
-    buf[i] = '\0';
+    buf[i] = NULL_CHAR;
 }
 
 
@@ -105,18 +101,18 @@ Output:
   Returns a heap-allocated string containing the command’s full path if found,
   or NULL if not found.
 --- */
-char* resolve_command_path(const char *cmd, char *envp[]) {
-    if (!cmd || cmd[0] == '\0') return NULL;
+char* resolve_command_path(const char *cmd, char *envp[])
+{
+    if (!cmd || cmd[ZERO_VALUE] == NULL_CHAR) return NULL;
 
-    // If cmd contains '/', treat as literal path
-    for (int k = 0; cmd[k]; k++) {
-        if (cmd[k] == '/') {
+    for (int k = ZERO_VALUE; cmd[k]; k++) {
+        if (cmd[k] == PATH_SEPARATOR) {
             struct stat st;
-            if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR)) {
-                int len = 0; while (cmd[len]) len++;
-                char *copy = (char*)alloc(len+1);
+            if (stat(cmd, &st) == ZERO_VALUE && (st.st_mode & S_IXUSR)) {
+                int len = ZERO_VALUE; while (cmd[len]) len++;
+                char *copy = alloc(len + TRUE_VALUE);
                 if (!copy) return NULL;
-                for (int i = 0; i <= len; i++) copy[i] = cmd[i];
+                for (int i = ZERO_VALUE; i <= len; i++) copy[i] = cmd[i];
                 return copy;
             } else {
                 return NULL;
@@ -124,46 +120,46 @@ char* resolve_command_path(const char *cmd, char *envp[]) {
         }
     }
 
-    // Get PATH from environment
     char *path_env = NULL;
-    for (int i = 0; envp[i]; i++) {
-        if (envp[i][0]=='P' && envp[i][1]=='A' && envp[i][2]=='T' &&
-            envp[i][3]=='H' && envp[i][4]=='=')
-        {
-            path_env = envp[i]+5;
+    for (int i = ZERO_VALUE; envp[i]; i++) {
+        if (envp[i][ZERO_VALUE]=='P' && envp[i][1]=='A' &&
+            envp[i][2]=='T' && envp[i][3]=='H' && envp[i][4]=='=') {
+            path_env = envp[i] + PATH_PREFIX_LEN;
             break;
         }
     }
     if (!path_env) path_env = "/usr/local/bin:/usr/bin:/bin";
 
-    char path_copy[1024];
-    int len = 0;
-    while (path_env[len] && len < 1023) { path_copy[len] = path_env[len]; len++; }
-    path_copy[len] = '\0';
+    char path_copy[MAX_PATH_LEN];
+    int len = ZERO_VALUE;
+    while (path_env[len] && len < MAX_PATH_LEN - TRUE_VALUE) {
+        path_copy[len] = path_env[len];
+        len++;
+    }
+    path_copy[len] = NULL_CHAR;
 
     char *start = path_copy;
-    for (int i = 0; i <= len; i++) {
-        if (path_copy[i] == ':' || path_copy[i] == '\0') {
-            path_copy[i] = '\0';
-            char fullpath[512];
+    for (int i = ZERO_VALUE; i <= len; i++) {
+        if (path_copy[i] == PATH_DELIMITER || path_copy[i] == NULL_CHAR) {
+            path_copy[i] = NULL_CHAR;
+            char fullpath[FULLPATH_LEN];
             build_fullpath(fullpath, start, cmd);
 
             struct stat st;
-            if (stat(fullpath, &st) == 0 && (st.st_mode & S_IXUSR)) {
-                int plen = 0; while (fullpath[plen]) plen++;
-                char *result = (char*)alloc(plen+1);
+            if (stat(fullpath, &st) == ZERO_VALUE && (st.st_mode & S_IXUSR)) {
+                int plen = ZERO_VALUE; while (fullpath[plen]) plen++;
+                char *result = alloc(plen + TRUE_VALUE);
                 if (!result) return NULL;
-                for (int j = 0; j <= plen; j++) result[j] = fullpath[j];
+                for (int j = ZERO_VALUE; j <= plen; j++) result[j] = fullpath[j];
                 return result;
             }
 
-            start = &path_copy[i+1];
+            start = &path_copy[i + TRUE_VALUE];
         }
     }
 
-    return NULL;  // not found
+    return NULL;
 }
-
 
 
 /* ---
@@ -178,8 +174,8 @@ Output:
 --- */
 static void create_pipes(int pipefd[MAX_PIPELINE_LEN - 1][2], int num_stages)
 {
-    for (int i = 0; i < num_stages - 1; i++) {
-        if (pipe(pipefd[i]) < 0)
+    for (int i = ZERO_VALUE; i < num_stages - TRUE_VALUE; i++) {
+        if (pipe(pipefd[i]) < ZERO_VALUE)
             print_error(ERR_PIPE_FAIL);
     }
 }
@@ -199,29 +195,28 @@ Output:
 static void setup_redirection(int stage_index, int num_stages, Job *job,
                               int pipefd[MAX_PIPELINE_LEN - 1][2])
 {
-    if (stage_index == 0 && job->infile_path) {
+    if (stage_index == ZERO_VALUE && job->infile_path) {
         int fd = open(job->infile_path, O_RDONLY);
-        if (fd < 0) { _exit(1); }
+        if (fd < ZERO_VALUE) _exit(EXIT_FAILURE_CODE);
         dup2(fd, STDIN_FILENO);
         close(fd);
     }
 
-    if (stage_index == num_stages - 1 && job->outfile_path) {
-        int fd = creat(job->outfile_path, 0644);
-        if (fd < 0) { _exit(1); }
+    if (stage_index == num_stages - TRUE_VALUE && job->outfile_path) {
+        int fd = creat(job->outfile_path, FILE_PERMISSIONS);
+        if (fd < ZERO_VALUE) _exit(EXIT_FAILURE_CODE);
         dup2(fd, STDOUT_FILENO);
         close(fd);
     }
 
-    if (stage_index > 0)
-        dup2(pipefd[stage_index - 1][0], STDIN_FILENO);
-    if (stage_index < num_stages - 1)
-        dup2(pipefd[stage_index][1], STDOUT_FILENO);
+    if (stage_index > ZERO_VALUE)
+        dup2(pipefd[stage_index - TRUE_VALUE][ZERO_VALUE], STDIN_FILENO);
+    if (stage_index < num_stages - TRUE_VALUE)
+        dup2(pipefd[stage_index][TRUE_VALUE], STDOUT_FILENO);
 
-    // Close only unused pipe ends
-    for (int i = 0; i < num_stages - 1; i++) {
-        if (i != stage_index - 1) close(pipefd[i][0]);
-        if (i != stage_index)     close(pipefd[i][1]);
+    for (int i = ZERO_VALUE; i < num_stages - TRUE_VALUE; i++) {
+        if (i != stage_index - TRUE_VALUE) close(pipefd[i][ZERO_VALUE]);
+        if (i != stage_index) close(pipefd[i][TRUE_VALUE]);
     }
 }
 
@@ -240,37 +235,34 @@ Output:
 static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
                                   int pipefd[MAX_PIPELINE_LEN - 1][2])
 {
-    if (!job->pipeline[stage_index].argv[0]) return -1;
+    if (!job->pipeline[stage_index].argv[ZERO_VALUE]) return ERROR_CODE;
 
     int pid = fork();
-    if (pid < 0) {
+    if (pid < ZERO_VALUE) {
         print_error(ERR_FORK_FAIL);
-        return -1;
+        return ERROR_CODE;
     }
 
-    if (pid == 0) { /* CHILD */
-      setpgid(0,0);
-        /* Reset signal handlers in child */
+    if (pid == ZERO_VALUE) {
+        setpgid(ZERO_VALUE, ZERO_VALUE);
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
         setup_redirection(stage_index, job->num_stages, job, pipefd);
 
-        /* Resolve command path */
-        char *fullpath = resolve_command_path(job->pipeline[stage_index].argv[0], envp);
+        char *fullpath = resolve_command_path(job->pipeline[stage_index].argv[ZERO_VALUE], envp);
         if (!fullpath) {
-            write(STDERR_FILENO, job->pipeline[stage_index].argv[0],
-                  mystrlen(job->pipeline[stage_index].argv[0]));
+            write(STDERR_FILENO, job->pipeline[stage_index].argv[ZERO_VALUE],
+                  mystrlen(job->pipeline[stage_index].argv[ZERO_VALUE]));
             write(STDERR_FILENO, error_messages[ERR_CMD_NOT_FOUND],
                   mystrlen(error_messages[ERR_CMD_NOT_FOUND]));
-            _exit(1);
+            _exit(EXIT_FAILURE_CODE);
         }
 
         execve(fullpath, job->pipeline[stage_index].argv, envp);
-        /* execve failed */
         write(STDERR_FILENO, error_messages[ERR_EXEC_FAIL],
               mystrlen(error_messages[ERR_EXEC_FAIL]));
-        _exit(1);
+        _exit(EXIT_FAILURE_CODE);
     }
 
     return pid;
@@ -288,25 +280,25 @@ Output:
 --- */
 static void print_background_pid(Job *job, int pid)
 {
-    char msg[128], pid_str[16];
-    int n = 0, temp_pid = pid;
+    char msg[MAX_MSG_LEN], pid_str[PID_STR_LEN];
+    int n = ZERO_VALUE, temp_pid = pid;
 
-    if (temp_pid == 0)
+    if (temp_pid == ZERO_VALUE)
         pid_str[n++] = '0';
-    else while (temp_pid > 0 && n < 16) {
-        pid_str[n++] = (temp_pid % 10) + '0';
-        temp_pid /= 10;
+    else while (temp_pid > ZERO_VALUE && n < PID_STR_LEN) {
+        pid_str[n++] = (temp_pid % DECIMAL_BASE) + '0';
+        temp_pid /= DECIMAL_BASE;
     }
 
-    for (int j = 0; j < n; j++)
-        pid_str[j] = pid_str[n - j - 1];
-    pid_str[n] = '\0';
+    for (int j = ZERO_VALUE; j < n; j++)
+        pid_str[j] = pid_str[n - j - TRUE_VALUE];
+    pid_str[n] = NULL_CHAR;
 
-    mystrcpy(msg, "[background pid ");
+    mystrcpy(msg, BG_MSG_PREFIX);
     mystrcat(msg, pid_str);
-    mystrcat(msg, "] ");
-    mystrcat(msg, job->pipeline[0].argv[0]);
-    mystrcat(msg, "\n");
+    mystrcat(msg, BG_MSG_SUFFIX);
+    mystrcat(msg, job->pipeline[ZERO_VALUE].argv[ZERO_VALUE]);
+    mystrcat(msg, NEWLINE_STR);
 
     write(STDOUT_FILENO, msg, mystrlen(msg));
 }
