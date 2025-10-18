@@ -17,7 +17,6 @@ enum ErrorCode {
     NUM_ERRORS
 };
 
-
 // ERROR MESSAGE TABLE
 static const char *error_messages[NUM_ERRORS] = {
     [ERR_CMD_NOT_FOUND]  = ": command not found\n",
@@ -28,7 +27,6 @@ static const char *error_messages[NUM_ERRORS] = {
     [ERR_FILE_NOT_FOUND] = ": file not found\n",
     [ERR_INVALID_INPUT]  = "Error: invalid input\n"
 };
-
 
 // FUNCTION PROTOTYPES
 void print_error(enum ErrorCode code);

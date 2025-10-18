@@ -34,6 +34,7 @@ static void test_sort_pipe_uniq_with_redirection(char *envp[]);
 static void test_output_redirection_only(char *envp[]);
 static void test_combined_redirection_and_pipeline(char *envp[]);
 static void test_cat_frankenstein(char *envp[]);
+static void test_less_frankenstein(char *envp[]);
 
 // MAIN
 int main(int argc, char *argv[], char *envp[])
@@ -57,6 +58,10 @@ int main(int argc, char *argv[], char *envp[])
 
     printf("\n=== Signal Handling Tests ===\n");
     test_sigint_handling(envp);
+
+    printf("\n=== Interactive Pager Test ===\n");
+    test_less_frankenstein(envp);
+    
 
     return 0;
 }
@@ -559,6 +564,34 @@ static void test_cat_frankenstein(char *envp[])
     job.infile_path = "frankenstein.txt";
 
     printf("=== Test: cat < frankenstein.txt ===\n");
+    print_job(&job);
+
+    run_job(&job, envp);
+    printf("=== End of test ===\n\n");
+}
+
+/* ---
+Function Name: test_less_frankenstein
+Purpose:
+    Tests reading large file through interactive pager (less frankenstein.txt).
+Input:
+    envp - environment variable array passed to execve().
+Output:
+    Streams file content to stdout to verify system-call based execution.
+--- */
+static void test_less_frankenstein(char *envp[])
+{
+    Job job;
+    set_test_job(&job);
+
+    job.num_stages = 1;
+    job.pipeline[0].argc = 1;
+    job.pipeline[0].argv[0] = "less";
+    job.pipeline[0].argv[1] = NULL;
+
+    job.infile_path = "frankenstein.txt";
+
+    printf("=== Test: less frankenstein.txt ===\n");
     print_job(&job);
 
     run_job(&job, envp);
