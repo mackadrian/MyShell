@@ -3,12 +3,16 @@
 
 #include_next <signal.h>    /* sig_atomic_t, sigaction, SIGINT, etc. */
 
-#define SIGNAL_PROMPT "\nmysh$ "
-#define SIGNAL_PROMPT_LEN 8
+#define SIGNAL_PROMPT           "\nmysh$ "
+#define SIGNAL_PROMPT_LEN       8
 
 #define NEWLINE_STR             "\n"
-#define NEWLINE_LEN             1
 #define NO_FLAGS                0
+#define INITIAL_INDEX           0
+#define ZERO_VALUE              0
+#define VALID_PID               0
+
+#define MSG_JOB_DONE            "[Job Done] "
 
 extern volatile sig_atomic_t fg_job_running;
 
