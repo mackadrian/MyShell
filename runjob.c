@@ -96,40 +96,72 @@ static void build_fullpath(char *buf, const char *dir, const char *cmd)
     buf[i] = NULL_CHAR;
 }
 
+/* ---
+Function Name: check_executable
 
-/* --- 
+Purpose:
+    Checks if a path exists and is executable.
+    
+Input:
+    path - path string to check
+    
+Output:
+    Returns 1 if path exists and is executable, 0 otherwise.
+--- */
+static int check_executable(const char *path)
+{
+    struct stat st;
+    return (stat(path, &st) == ZERO_VALUE && (st.st_mode & S_IXUSR));
+}
+
+/* ---
+Function Name: copy_string_heap
+
+Purpose:
+    Copies a string to a newly allocated heap buffer.
+    
+Input:
+    src - source string
+    
+Output:
+    Returns pointer to heap copy or NULL if allocation fails.
+--- */
+static char* copy_string_heap(const char *src)
+{
+    int len = ZERO_VALUE;
+    while (src[len]) len++;
+    char *copy = alloc(len + TRUE_VALUE);
+    if (!copy) return NULL;
+    for (int i = ZERO_VALUE; i <= len; i++)
+        copy[i] = src[i];
+    return copy;
+}
+
+/* ---
 Function Name: resolve_command_path
 
 Purpose:
-  Resolves the full path of a command using the PATH environment variable.
-  
+    Resolves a command name to its full executable path using PATH.
+    
 Input:
-  cmd - command name
-  envp - environment variables
-  
+    cmd  - command name
+    envp - environment variables
+    
 Output:
-  Returns a heap-allocated string containing the command’s full path if found,
-  or NULL if not found.
+    Returns heap-allocated full path if found, NULL otherwise.
 --- */
 char* resolve_command_path(const char *cmd, char *envp[])
 {
     if (!cmd || cmd[ZERO_VALUE] == NULL_CHAR) return NULL;
 
+    /* Absolute or relative path given */
     for (int k = ZERO_VALUE; cmd[k]; k++) {
-        if (cmd[k] == PATH_SEPARATOR) {
-            struct stat st;
-            if (stat(cmd, &st) == ZERO_VALUE && (st.st_mode & S_IXUSR)) {
-                int len = ZERO_VALUE; while (cmd[len]) len++;
-                char *copy = alloc(len + TRUE_VALUE);
-                if (!copy) return NULL;
-                for (int i = ZERO_VALUE; i <= len; i++) copy[i] = cmd[i];
-                return copy;
-            } else {
-                return NULL;
-            }
+        if (cmd[k] == PATH_SEPARATOR && check_executable(cmd)) {
+            return copy_string_heap(cmd);
         }
     }
 
+    /* Get PATH environment */
     char *path_env = NULL;
     for (int i = ZERO_VALUE; envp[i]; i++) {
         if (envp[i][ZERO_VALUE]=='P' && envp[i][1]=='A' &&
@@ -140,6 +172,7 @@ char* resolve_command_path(const char *cmd, char *envp[])
     }
     if (!path_env) path_env = "/usr/local/bin:/usr/bin:/bin";
 
+    /* Copy PATH to local buffer */
     char path_copy[MAX_PATH_LEN];
     int len = ZERO_VALUE;
     while (path_env[len] && len < MAX_PATH_LEN - TRUE_VALUE) {
@@ -148,21 +181,16 @@ char* resolve_command_path(const char *cmd, char *envp[])
     }
     path_copy[len] = NULL_CHAR;
 
+    /* Iterate over directories in PATH */
     char *start = path_copy;
     for (int i = ZERO_VALUE; i <= len; i++) {
         if (path_copy[i] == PATH_DELIMITER || path_copy[i] == NULL_CHAR) {
             path_copy[i] = NULL_CHAR;
+
             char fullpath[FULLPATH_LEN];
             build_fullpath(fullpath, start, cmd);
-
-            struct stat st;
-            if (stat(fullpath, &st) == ZERO_VALUE && (st.st_mode & S_IXUSR)) {
-                int plen = ZERO_VALUE; while (fullpath[plen]) plen++;
-                char *result = alloc(plen + TRUE_VALUE);
-                if (!result) return NULL;
-                for (int j = ZERO_VALUE; j <= plen; j++) result[j] = fullpath[j];
-                return result;
-            }
+            if (check_executable(fullpath))
+                return copy_string_heap(fullpath);
 
             start = &path_copy[i + TRUE_VALUE];
         }
@@ -170,7 +198,6 @@ char* resolve_command_path(const char *cmd, char *envp[])
 
     return NULL;
 }
-
 
 /* ---
 Function Name: create_pipes
@@ -288,63 +315,65 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
 }
 
 /* ---
-Function Name: print_background_pid
+Function Name: itoa_custom
 
 Purpose:
-    Displays background job info in Bash style: [job_number] pid command
+    Converts an integer to a string in decimal form.
     
 Input:
-    job - pointer to Job structure
-    pid - process ID of first command in pipeline
+    value  - integer to convert
+    buf    - output buffer
+    buflen - maximum buffer length
     
 Output:
-    Prints background job info to STDOUT.
+    Stores the null-terminated string representation of value in buf.
 --- */
-static void print_background_pid(Job *job, int pid)
+static void itoa_custom(int value, char *buf, int buflen)
 {
-    char msg[MAX_MSG_LEN];
+    int n = INITIAL_INDEX;
+    int temp = value;
+
+    if (temp == INITIAL_INDEX) {
+        buf[n++] = ZERO_CHAR;
+    } else {
+        while (temp > INITIAL_INDEX && n < buflen - TRUE_VALUE) {
+            buf[n++] = (temp % DECIMAL_BASE) + ZERO_CHAR;
+            temp /= DECIMAL_BASE;
+        }
+    }
+
+    /* Reverse string */
+    for (int i = INITIAL_INDEX; i < n / 2; i++) {
+        char tmp = buf[i];
+        buf[i] = buf[n - i - 1];
+        buf[n - i - 1] = tmp;
+    }
+    buf[n] = NULL_CHAR;
+}
+
+/* ---
+Function Name: construct_background_msg
+
+Purpose:
+    Constructs the background job message "[job_number] pid command" in msg buffer.
+    
+Input:
+    msg   - output buffer
+    job   - pointer to Job structure
+    pid   - process ID
+    job_no - job number to display (starting at 1)
+    
+Output:
+    msg buffer contains the formatted string.
+--- */
+static void construct_background_msg(char *msg, Job *job, int pid, int job_no)
+{
     char pid_str[PID_STR_LEN];
     char job_num_str[PID_STR_LEN];
-    int n = INITIAL_INDEX, temp_pid = pid;
 
-    if (temp_pid == INITIAL_INDEX) {
-        pid_str[n++] = ZERO_CHAR;
-    } else {
-        while (temp_pid > INITIAL_INDEX && n < PID_STR_LEN) {
-            pid_str[n++] = (temp_pid % DECIMAL_BASE) + ZERO_CHAR;
-            temp_pid /= DECIMAL_BASE;
-        }
-    }
+    itoa_custom(pid, pid_str, PID_STR_LEN);
+    itoa_custom(job_no, job_num_str, PID_STR_LEN);
 
-    /* Reverse PID string */
-    for (int j = INITIAL_INDEX; j < n / HALF; j++) {
-        char tmp = pid_str[j];
-        pid_str[j] = pid_str[n - j - INDEX_OFFSET];
-        pid_str[n - j - INDEX_OFFSET] = tmp;
-    }
-    pid_str[n] = NULL_CHAR;
-
-    /* Convert job number to string */
-    int job_index = num_jobs + INDEX_OFFSET;
-    n = INITIAL_INDEX;
-    if (job_index == INITIAL_INDEX) {
-        job_num_str[n++] = ZERO_CHAR;
-    } else {
-        while (job_index > INITIAL_INDEX && n < PID_STR_LEN) {
-            job_num_str[n++] = (job_index % DECIMAL_BASE) + ZERO_CHAR;
-            job_index /= DECIMAL_BASE;
-        }
-    }
-
-    /* Reverse job number string */
-    for (int j = INITIAL_INDEX; j < n / HALF; j++) {
-        char tmp = job_num_str[j];
-        job_num_str[j] = job_num_str[n - j - INDEX_OFFSET];
-        job_num_str[n - j - INDEX_OFFSET] = tmp;
-    }
-    job_num_str[n] = NULL_CHAR;
-
-    /* Construct message: [job_number] pid command */
     mystrcpy(msg, MSG_BG_PREFIX);
     mystrcat(msg, job_num_str);
     mystrcat(msg, MSG_BG_SUFFIX);
@@ -352,10 +381,28 @@ static void print_background_pid(Job *job, int pid)
     mystrcat(msg, MSG_SPACE);
     mystrcat(msg, job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]);
     mystrcat(msg, NEWLINE_STR);
-
-    write(STDOUT_FILENO, msg, mystrlen(msg));
 }
 
+/* ---
+Function Name: print_background_pid
+
+Purpose:
+    Prints background job info to STDOUT in Bash style.
+    
+Input:
+    job - pointer to Job structure
+    pid - process ID of first command in pipeline
+    
+Output:
+    Prints message like "[1] 1234 sleep" to STDOUT.
+--- */
+static void print_background_pid(Job *job, int pid)
+{
+    char msg[MAX_MSG_LEN];
+    int job_no = num_jobs + INDEX_OFFSET;
+    construct_background_msg(msg, job, pid, job_no);
+    write(STDOUT_FILENO, msg, mystrlen(msg));
+}
 
 /* ---
 Function Name: execute_all_stages

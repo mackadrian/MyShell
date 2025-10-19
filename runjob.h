@@ -45,6 +45,10 @@ void add_job(Job *job, int pid);
 extern Job jobs[MAX_JOBS];
 extern int num_jobs;
 
+static int check_executable(const char *path);
+static char* copy_string_heap(const char *src);
+static void itoa_custom(int value, char *buf, int buflen);
+static void construct_background_msg(char *msg, Job *job, int pid, int job_no);
 static void build_fullpath(char *buf, const char *dir, const char *cmd);
 static void print_background_pid(Job *job, int pid);
 static void create_pipes(int pipefd[MAX_PIPELINE_LEN-1][2], int num_stages);
