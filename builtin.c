@@ -276,13 +276,13 @@ void handle_jobs(char **argv)
 	    state = STATUS_DONE_TEXT;
 	  }
 
-            write(STDOUT_FILENO, "[", 1);
+	    write(STDOUT_FILENO, MSG_JOB_PREFIX, mystrlen(MSG_JOB_PREFIX));
 
             char idBuffer[JOB_DISPLAY_WIDTH];
             myitoa(jobIndex + JOB_ID_OFFSET, idBuffer);
             write(STDOUT_FILENO, idBuffer, mystrlen(idBuffer));
 
-            write(STDOUT_FILENO, "] ", 2);
+            write(STDOUT_FILENO, MSG_JOB_SUFFIX, mystrlen(MSG_JOB_SUFFIX));
             write(STDOUT_FILENO, state, mystrlen(state));
             write(STDOUT_FILENO, TERMINAL_TAB_CHAR, mystrlen(TERMINAL_TAB_CHAR));
 
@@ -321,7 +321,7 @@ void builtin_fg(char **argv) {
     int status;
     while (waitpid(-job->pgid, &status, WUNTRACED) > ZERO_VALUE) {
         if (WIFSTOPPED(status)) {
-            write(STDOUT_FILENO, "[FG stopped]\n", 13);
+	    write(STDOUT_FILENO, MSG_FG_STOPPED, mystrlen(MSG_FG_STOPPED));
             return;
         }
         if (WIFSIGNALED(status) || WIFEXITED(status))
@@ -353,11 +353,11 @@ void builtin_bg(char **argv) {
     kill(-job->pgid, SIGCONT);
     job->background = TRUE;
 
-    write(STDOUT_FILENO, "[", 1);
+    write(STDOUT_FILENO, MSG_BG_RUNNING_PREFIX, mystrlen(MSG_BG_RUNNING_PREFIX));
     char buf[JOB_DISPLAY_WIDTH];
     myitoa(num_jobs, buf);
     write(STDOUT_FILENO, buf, mystrlen(buf));
-    write(STDOUT_FILENO, "] Running\t", 10);
+    write(STDOUT_FILENO, MSG_BG_RUNNING_SUFFIX, mystrlen(MSG_BG_RUNNING_SUFFIX));
     write(STDOUT_FILENO, job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX],
           mystrlen(job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]));
     write(STDOUT_FILENO, JOB_NEWLINE_CHAR, mystrlen(JOB_NEWLINE_CHAR));

@@ -49,6 +49,11 @@ extern int num_jobs;
 #define STATUS_RUNNING_TEXT     "Running"
 #define STATUS_DONE_TEXT        "Done"
 #define STATUS_STOPPED_TEXT     "Stopped"
+#define MSG_JOB_PREFIX          "["
+#define MSG_JOB_SUFFIX          "] "
+#define MSG_FG_STOPPED          "[FG stopped]\n"
+#define MSG_BG_RUNNING_PREFIX   "["
+#define MSG_BG_RUNNING_SUFFIX   "] Running \t"
 
 // Error Messages
 #define CD_ERROR_MSG            "cd: failed\n"
