@@ -319,13 +319,13 @@ static void print_background_pid(Job *job, int pid)
     /* Reverse PID string */
     for (int j = INITIAL_INDEX; j < n / HALF; j++) {
         char tmp = pid_str[j];
-        pid_str[j] = pid_str[n - j - 1];
+        pid_str[j] = pid_str[n - j - INDEX_OFFSET];
         pid_str[n - j - INDEX_OFFSET] = tmp;
     }
     pid_str[n] = NULL_CHAR;
 
     /* Convert job number to string */
-    int job_index = num_jobs;
+    int job_index = num_jobs + INDEX_OFFSET;
     n = INITIAL_INDEX;
     if (job_index == INITIAL_INDEX) {
         job_num_str[n++] = ZERO_CHAR;
