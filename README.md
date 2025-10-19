@@ -1,4 +1,4 @@
-# COMP3659-Linux_Shell
+# MyShell: COMP3659 Project 1
 
 Repository for COMP3659: Operating Systems Project 1.  
 **Name(s):** Mack Bautista, Jarod Dacocos, Tarun Jaswal
@@ -76,6 +76,8 @@ See Document Standards for coding style and formatting rules.
 
 **[MyShell: Documentation & Standards](https://docs.google.com/document/d/1beNYnvzGkkVtpL-kpD2HMCSiS3ZXqbQc63ivL4OA0xk/edit?usp=sharing)**
 
+See Test Plan for comprehensive bugs and testing.
+
 **[Test Plan & Quality Assurance](https://docs.google.com/document/d/1-6ykIIHV6h9LzkOcaWUjN9QYaBPrQ-XKlb5aywLQ22o/edit?usp=sharing)**
 
 
@@ -91,4 +93,4 @@ For full details, see the Test Plan & QA document.
 
 ## License
 All rights reserved © 2025 Mack Bautista, Jarod Dacocos, Tarun Jaswal.  
-This project is for educational use in COMP3659 at Mount Royal University.
+This project is for educational use in COMP3659: Operating Systems at Mount Royal University.
