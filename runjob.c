@@ -81,14 +81,14 @@ void run_job(Job *job, char *envp[])
             add_job(job, pids[i]);
             jobs[num_jobs - 1].background = 0;
 
-            write(STDOUT_FILENO, "[", 1);
-            char buf[8];
+            write(STDOUT_FILENO, FG_MSG_PREFIX, 1);
+            char buf[MSG_BUFFER];
             myitoa(num_jobs, buf);
             write(STDOUT_FILENO, buf, mystrlen(buf));
-            write(STDOUT_FILENO, "] Stopped\t", 10);
+            write(STDOUT_FILENO, FG_MSG_SUFFIX, 10);
             write(STDOUT_FILENO, job->pipeline[0].argv[0],
                   mystrlen(job->pipeline[0].argv[0]));
-            write(STDOUT_FILENO, "\n", 1);
+            write(STDOUT_FILENO, NEWLINE_STR, 1);
 	    fsync(STDOUT_FILENO);
             break;
         }
@@ -366,9 +366,9 @@ static void print_background_pid(Job *job, int pid)
     int n = ZERO_VALUE, temp_pid = pid;
 
     if (temp_pid == ZERO_VALUE)
-        pid_str[n++] = '0';
+        pid_str[n++] = ZERO_CHAR;
     else while (temp_pid > ZERO_VALUE && n < PID_STR_LEN) {
-        pid_str[n++] = (temp_pid % DECIMAL_BASE) + '0';
+        pid_str[n++] = (temp_pid % DECIMAL_BASE) + ZERO_CHAR;
         temp_pid /= DECIMAL_BASE;
     }
 

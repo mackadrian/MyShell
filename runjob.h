@@ -17,12 +17,14 @@
 #define NULL_CHAR               '\0'
 #define PATH_PREFIX_LEN         5
 #define DECIMAL_BASE            10
+#define ZERO_CHAR               '0'
 
 // Sizes / Lengths
 #define MAX_PATH_LEN            1024
 #define FULLPATH_LEN            512
 #define MAX_MSG_LEN             128
 #define PID_STR_LEN             16
+#define MSG_BUFFER              8
 
 // File / I/O
 #define FILE_PERMISSIONS        0644
@@ -30,6 +32,8 @@
 // Message Formatting
 #define BG_MSG_PREFIX           "[background pid "
 #define BG_MSG_SUFFIX           "] "
+#define FG_MSG_PREFIX           "["
+#define FG_MSG_SUFFIX           "] stopped \t"
 #define NEWLINE_STR             "\n"
 
 char* resolve_command_path(const char *cmd, char *envp[]);

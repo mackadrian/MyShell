@@ -13,6 +13,9 @@
 #define OUTPUT_REDIRECT_CHAR    '>'
 #define NULL_CHAR               '\0'
 
+#define TOKEN_INPUT             "<"
+#define TOKEN_OUTPUT            ">"
+
 #define ZERO_VALUE              0
 #define TRUE_VALUE              1
 #define ERROR_CODE              -1
