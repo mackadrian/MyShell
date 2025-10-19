@@ -291,7 +291,7 @@ static int fork_and_execute_stage(int stage_index, Job *job, char *envp[],
 Function Name: print_background_pid
 
 Purpose:
-    Displays background job process ID.
+    Displays background job info in Bash style: [job_number] pid command
     
 Input:
     job - pointer to Job structure
@@ -302,28 +302,60 @@ Output:
 --- */
 static void print_background_pid(Job *job, int pid)
 {
-    char msg[MAX_MSG_LEN], pid_str[PID_STR_LEN];
-    int n = ZERO_VALUE, temp_pid = pid;
+    char msg[MAX_MSG_LEN];
+    char pid_str[PID_STR_LEN];
+    char job_num_str[PID_STR_LEN];
+    int n = INITIAL_INDEX, temp_pid = pid;
 
-    if (temp_pid == ZERO_VALUE)
+    if (temp_pid == INITIAL_INDEX) {
         pid_str[n++] = ZERO_CHAR;
-    else while (temp_pid > ZERO_VALUE && n < PID_STR_LEN) {
-        pid_str[n++] = (temp_pid % DECIMAL_BASE) + ZERO_CHAR;
-        temp_pid /= DECIMAL_BASE;
+    } else {
+        while (temp_pid > INITIAL_INDEX && n < PID_STR_LEN) {
+            pid_str[n++] = (temp_pid % DECIMAL_BASE) + ZERO_CHAR;
+            temp_pid /= DECIMAL_BASE;
+        }
     }
 
-    for (int j = ZERO_VALUE; j < n; j++)
-        pid_str[j] = pid_str[n - j - TRUE_VALUE];
+    /* Reverse PID string */
+    for (int j = INITIAL_INDEX; j < n / HALF; j++) {
+        char tmp = pid_str[j];
+        pid_str[j] = pid_str[n - j - 1];
+        pid_str[n - j - INDEX_OFFSET] = tmp;
+    }
     pid_str[n] = NULL_CHAR;
 
-    mystrcpy(msg, BG_MSG_PREFIX);
+    /* Convert job number to string */
+    int job_index = num_jobs;
+    n = INITIAL_INDEX;
+    if (job_index == INITIAL_INDEX) {
+        job_num_str[n++] = ZERO_CHAR;
+    } else {
+        while (job_index > INITIAL_INDEX && n < PID_STR_LEN) {
+            job_num_str[n++] = (job_index % DECIMAL_BASE) + ZERO_CHAR;
+            job_index /= DECIMAL_BASE;
+        }
+    }
+
+    /* Reverse job number string */
+    for (int j = INITIAL_INDEX; j < n / HALF; j++) {
+        char tmp = job_num_str[j];
+        job_num_str[j] = job_num_str[n - j - INDEX_OFFSET];
+        job_num_str[n - j - INDEX_OFFSET] = tmp;
+    }
+    job_num_str[n] = NULL_CHAR;
+
+    /* Construct message: [job_number] pid command */
+    mystrcpy(msg, MSG_BG_PREFIX);
+    mystrcat(msg, job_num_str);
+    mystrcat(msg, MSG_BG_SUFFIX);
     mystrcat(msg, pid_str);
-    mystrcat(msg, BG_MSG_SUFFIX);
-    mystrcat(msg, job->pipeline[ZERO_VALUE].argv[ZERO_VALUE]);
+    mystrcat(msg, MSG_SPACE);
+    mystrcat(msg, job->pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]);
     mystrcat(msg, NEWLINE_STR);
 
     write(STDOUT_FILENO, msg, mystrlen(msg));
 }
+
 
 /* ---
 Function Name: execute_all_stages
@@ -430,11 +462,11 @@ static void handle_foreground_job(Job *job, int *pids)
             add_job(job, pids[i]);
             jobs[num_jobs - 1].background = 0;
 
-            write(STDOUT_FILENO, FG_MSG_PREFIX, 1);
+            write(STDOUT_FILENO, MSG_FG_PREFIX, 1);
             char buf[MSG_BUFFER];
             myitoa(num_jobs, buf);
             write(STDOUT_FILENO, buf, mystrlen(buf));
-            write(STDOUT_FILENO, FG_MSG_SUFFIX, 10);
+            write(STDOUT_FILENO, MSG_FG_SUFFIX, 10);
             write(STDOUT_FILENO, job->pipeline[0].argv[0],
                   mystrlen(job->pipeline[0].argv[0]));
             write(STDOUT_FILENO, NEWLINE_STR, 1);

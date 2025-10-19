@@ -5,6 +5,7 @@
 #include "mysh.h"
 
 // Numeric / Boolean Constants
+#define INDEX_OFFSET            1
 #define ZERO_VALUE              0
 #define TRUE_VALUE              1
 #define ERROR_CODE              -1
@@ -30,10 +31,11 @@
 #define FILE_PERMISSIONS        0644
 
 // Message Formatting
-#define BG_MSG_PREFIX           "[background pid "
-#define BG_MSG_SUFFIX           "] "
-#define FG_MSG_PREFIX           "["
-#define FG_MSG_SUFFIX           "] stopped \t"
+#define MSG_SPACE               " "
+#define MSG_BG_PREFIX            "["
+#define MSG_BG_SUFFIX            "] "
+#define MSG_FG_PREFIX           "["
+#define MSG_FG_SUFFIX           "] stopped \t"
 #define NEWLINE_STR             "\n"
 
 char* resolve_command_path(const char *cmd, char *envp[]);
