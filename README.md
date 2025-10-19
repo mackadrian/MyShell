@@ -51,6 +51,13 @@ mysh$ ls -al | wc -l
 42
 ```
 
+4. Background Jobs
+```bash
+mysh$ sleep 5 &
+[1] 1234
+mysh$
+```
+
 ## Supported Features
 + Execute single commands and pipelines
 + Input and output redirection (>, <)
@@ -63,3 +70,25 @@ mysh$ ls -al | wc -l
 + Does not support advanced Bash features such as command substituion or shell scripting
 + Limited PATH resolution (does not handle every edge case)
 + Other signals are ignored or not fully supported
+
+## Documentation
+See Document Standards for coding style and formatting rules.
+
+**[MyShell: Documentation & Standards](https://docs.google.com/document/d/1beNYnvzGkkVtpL-kpD2HMCSiS3ZXqbQc63ivL4OA0xk/edit?usp=sharing)**
+
+**[Test Plan & Quality Assurance](https://docs.google.com/document/d/1-6ykIIHV6h9LzkOcaWUjN9QYaBPrQ-XKlb5aywLQ22o/edit?usp=sharing)**
+
+
+## Known Bugs
+Some known issues include:
++ Background job parsing and formatting inconsistencies
+
++ Double prompts after exiting less
+
++ Infinite loop on repeated Ctrl+C (major bug)
+
+For full details, see the Test Plan & QA document.
+
+## License
+All rights reserved © 2025 Mack Bautista, Jarod Dacocos, Tarun Jaswal.  
+This project is for educational use in COMP3659 at Mount Royal University.
