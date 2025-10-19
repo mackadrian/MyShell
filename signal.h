@@ -2,6 +2,7 @@
 #define SIGNAL_H
 
 #include_next <signal.h>    /* sig_atomic_t, sigaction, SIGINT, etc. */
+#include "mysh.h"
 
 #define SIGNAL_PROMPT           "\nmysh$ "
 #define SIGNAL_PROMPT_LEN       8

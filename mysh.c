@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int fg_job_status = 0;
+int fg_job_status = FALSE_VALUE;
 
 /* ---
 Function Name: main
@@ -46,41 +46,41 @@ int main(int argc, char *argv[], char *envp[])
             continue;
         }
 
-        expand_variables(job.pipeline[FALSE_VALUE].argv, envp);
+        expand_variables(job.pipeline[INITIAL_INDEX].argv, envp);
         /* Built-in Exit */
-        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "exit") == FALSE_VALUE) {
+        if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_EXIT) == FALSE_VALUE) {
             int status = FALSE_VALUE;
-            if (job.pipeline[FALSE_VALUE].argv[TRUE_VALUE])
-                status = myatoi(job.pipeline[FALSE_VALUE].argv[TRUE_VALUE]);
+            if (job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX + 1])
+                status = myatoi(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX + 1]);
             free_all();
             _exit(status);
         }
         /* Built-in cd */
-        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "cd") == FALSE_VALUE) {
-            handle_cd(job.pipeline[FALSE_VALUE].argv, envp);
+        if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_CD) == FALSE_VALUE) {
+            handle_cd(job.pipeline[INITIAL_INDEX].argv, envp);
             get_job(&job);
             continue;
         }
         /* Built-in export */
-        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "export") == FALSE_VALUE) {
-            handle_export(job.pipeline[FALSE_VALUE].argv, envp);
+        if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_EXPORT) == FALSE_VALUE) {
+            handle_export(job.pipeline[INITIAL_INDEX].argv, envp);
             get_job(&job);
             continue;
         }
 	/* Built-in jobs*/
-	if (mystrcmp(job.pipeline[0].argv[0], "jobs") == 0) {
-	  handle_jobs(job.pipeline[0].argv);
+	if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_JOBS) == FALSE_VALUE) {
+	  handle_jobs(job.pipeline[INITIAL_INDEX].argv);
 	  get_job(&job);
 	  continue;
 	}
         /* Built-in fg */
-        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "fg") == FALSE_VALUE) {
+        if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_FG) == FALSE_VALUE) {
             builtin_fg(NULL_PTR);
             get_job(&job);
             continue;
         }
         /* Built-in bg */
-        if (mystrcmp(job.pipeline[FALSE_VALUE].argv[FALSE_VALUE], "bg") == FALSE_VALUE) {
+        if (mystrcmp(job.pipeline[INITIAL_INDEX].argv[INITIAL_INDEX], CMD_BG) == FALSE_VALUE) {
             builtin_bg(NULL_PTR);
             get_job(&job);
             continue;

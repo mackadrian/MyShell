@@ -6,11 +6,19 @@
 #include <sys/wait.h>   // for waitpid(), WIFEXITED, etc.
 
 /*CONSTANTS*/
-#define SHELL "mysh$ "
-#define STD_IN 0
-#define STD_OUT 1
-#define STD_ERR 2
+#define SHELL                   "mysh$ "
+#define CMD_EXIT                "exit"
+#define CMD_CD                  "cd"
+#define CMD_EXPORT              "export"
+#define CMD_JOBS                "jobs"
+#define CMD_FG                  "fg"
+#define CMD_BG                  "bg"
 
+#define STD_IN                  0
+#define STD_OUT                 1
+#define STD_ERR                 2
+
+#define INITIAL_INDEX           0
 #define FALSE_VALUE             0
 #define TRUE_VALUE              1
 #define WAIT_ANY_CHILD          (-1)
