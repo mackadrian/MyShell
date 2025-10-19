@@ -25,85 +25,25 @@ Output:
 --- */
 void run_job(Job *job, char *envp[])
 {
-    int fg_job_status;
     if (!job || job->num_stages == ZERO_VALUE) return;
 
     int pipefd[MAX_PIPELINE_LEN - 1][2];
     int pids[MAX_PIPELINE_LEN];
-    int fg_job_running = !job->background;
 
     create_pipes(pipefd, job->num_stages);
 
-    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
-        pids[i] = fork_and_execute_stage(i, job, envp, pipefd);
-        if (pids[i] < ZERO_VALUE) {
-            fg_job_running = ZERO_VALUE;
-            free_all();
-            return;
-        }
+    if (!execute_all_stages(job, envp, pipefd, pids)) {
+        free_all();
+        return;
     }
 
-    for (int i = ZERO_VALUE; i < job->num_stages - TRUE_VALUE; i++) {
-        close(pipefd[i][ZERO_VALUE]);
-        close(pipefd[i][TRUE_VALUE]);
-    }
+    close_all_pipes(pipefd, job->num_stages);
 
     if (job->background) {
-        print_background_pid(job, pids[ZERO_VALUE]);
-	add_job(job, pids[ZERO_VALUE]);
-        fg_job_running = ZERO_VALUE;
+        handle_background_job(job, pids[ZERO_VALUE]);
     } else {
-    int status;
-
-    /* Allow the foreground job to receive Ctrl+Z and Ctrl+C */
-    signal(SIGTSTP, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
-
-    /* Give the terminal to the job's process group */
-    signal(SIGTTOU, SIG_IGN);               // prevent blocking on tcsetpgrp
-    tcsetpgrp(STDIN_FILENO, pids[ZERO_VALUE]);
-
-    fg_job_running = TRUE_VALUE;
-
-    /* Wait for the job to finish or stop */
-    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
-        while (waitpid(pids[i], &status, WUNTRACED) == -1 && errno == EINTR)
-            continue;
-
-        if (WIFEXITED(status)) {
-            fg_job_status = WEXITSTATUS(status);
-        } else if (WIFSIGNALED(status)) {
-            fg_job_status = EXIT_FAILURE_CODE;
-            if (WTERMSIG(status) == SIGINT)
-                break;
-        } else if (WIFSTOPPED(status)) {
-            /* Handle Ctrl+Z stopping the foreground job */
-            add_job(job, pids[i]);
-            jobs[num_jobs - 1].background = 0;
-
-            write(STDOUT_FILENO, FG_MSG_PREFIX, 1);
-            char buf[MSG_BUFFER];
-            myitoa(num_jobs, buf);
-            write(STDOUT_FILENO, buf, mystrlen(buf));
-            write(STDOUT_FILENO, FG_MSG_SUFFIX, 10);
-            write(STDOUT_FILENO, job->pipeline[0].argv[0],
-                  mystrlen(job->pipeline[0].argv[0]));
-            write(STDOUT_FILENO, NEWLINE_STR, 1);
-	    fsync(STDOUT_FILENO);
-            break;
-        }
+        handle_foreground_job(job, pids);
     }
-
-    /* Return terminal control to the shell */
-    tcsetpgrp(STDIN_FILENO, getpgrp());
-    signal(SIGTTOU, SIG_DFL);
-
-    /* Shell should ignore Ctrl+Z again */
-    signal(SIGTSTP, SIG_IGN);
-    signal(SIGINT, handle_signal);
-
-    fg_job_running = ZERO_VALUE;
-}
 
     free_all();
 }
@@ -383,4 +323,131 @@ static void print_background_pid(Job *job, int pid)
     mystrcat(msg, NEWLINE_STR);
 
     write(STDOUT_FILENO, msg, mystrlen(msg));
+}
+
+/* ---
+Function Name: execute_all_stages
+
+Purpose:
+    Forks and executes all stages of the job pipeline.
+
+Input:
+    job - pointer to Job structure
+    envp - environment variables
+    pipefd - array of pipe file descriptors
+
+Output:
+    Returns 1 on success, 0 on failure. Populates pids array.
+--- */
+static int execute_all_stages(Job *job, char *envp[], int pipefd[MAX_PIPELINE_LEN - 1][2], int *pids)
+{
+    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
+        pids[i] = fork_and_execute_stage(i, job, envp, pipefd);
+        if (pids[i] < ZERO_VALUE)
+            return ZERO_VALUE;
+    }
+    return TRUE_VALUE;
+}
+
+/* ---
+Function Name: close_all_pipes
+
+Purpose:
+    Closes all pipe file descriptors after use.
+
+Input:
+    pipefd - 2D array of pipe file descriptors
+    num_stages - number of stages in the job
+
+Output:
+    Closes all pipe read/write ends.
+--- */
+static void close_all_pipes(int pipefd[MAX_PIPELINE_LEN - 1][2], int num_stages)
+{
+    for (int i = ZERO_VALUE; i < num_stages - TRUE_VALUE; i++) {
+        close(pipefd[i][ZERO_VALUE]);
+        close(pipefd[i][TRUE_VALUE]);
+    }
+}
+
+/* ---
+Function Name: handle_background_job
+
+Purpose:
+    Handles background job behavior by printing PID and adding it to the job list.
+
+Input:
+    job - pointer to Job structure
+    pid - PID of the first process in the pipeline
+
+Output:
+    Prints background job info and stores it.
+--- */
+static void handle_background_job(Job *job, int pid)
+{
+    print_background_pid(job, pid);
+    add_job(job, pid);
+}
+
+/* ---
+Function Name: handle_foreground_job
+
+Purpose:
+    Handles foreground job execution, signal management, and waiting.
+
+Input:
+    job - pointer to Job structure
+    pids - array of process IDs for the job stages
+
+Output:
+    Waits for job completion or suspension. Restores shell control.
+--- */
+static void handle_foreground_job(Job *job, int *pids)
+{
+    int status;
+    int fg_job_status;
+
+    /* Allow the foreground job to receive Ctrl+Z and Ctrl+C */
+    signal(SIGTSTP, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+
+    /* Give the terminal to the job's process group */
+    signal(SIGTTOU, SIG_IGN);
+    tcsetpgrp(STDIN_FILENO, pids[ZERO_VALUE]);
+
+    for (int i = ZERO_VALUE; i < job->num_stages; i++) {
+        while (waitpid(pids[i], &status, WUNTRACED) == -1 && errno == EINTR)
+            continue;
+
+        if (WIFEXITED(status)) {
+            fg_job_status = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            fg_job_status = EXIT_FAILURE_CODE;
+            if (WTERMSIG(status) == SIGINT)
+                break;
+        } else if (WIFSTOPPED(status)) {
+            /* Handle Ctrl+Z stopping the foreground job */
+            add_job(job, pids[i]);
+            jobs[num_jobs - 1].background = 0;
+
+            write(STDOUT_FILENO, FG_MSG_PREFIX, 1);
+            char buf[MSG_BUFFER];
+            myitoa(num_jobs, buf);
+            write(STDOUT_FILENO, buf, mystrlen(buf));
+            write(STDOUT_FILENO, FG_MSG_SUFFIX, 10);
+            write(STDOUT_FILENO, job->pipeline[0].argv[0],
+                  mystrlen(job->pipeline[0].argv[0]));
+            write(STDOUT_FILENO, NEWLINE_STR, 1);
+            fsync(STDOUT_FILENO);
+            break;
+        }
+    }
+
+    /* Return terminal control to the shell */
+    tcsetpgrp(STDIN_FILENO, getpgrp());
+    signal(SIGTTOU, SIG_DFL);
+
+    /* Shell should ignore Ctrl+Z again */
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGINT, handle_signal);
 }
