@@ -10,13 +10,14 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+/* STRING FORMAT CONSTANTS */
 #define TEST_SEPERATOR "-------------------------------------------------\n"
 
 /* Dummy globals for unit testing */
 Job jobs[MAX_JOBS];
 int num_jobs = 0;
 
-// FUNCTION DECLARATIONS
+/* FUNCTION DECLARATIONS */
 static void print_job(Job *job);
 static void set_test_job(Job *job);
 static void build_cmdline(Job *job, char *cmdline, size_t size);
@@ -37,7 +38,7 @@ static void test_output_redirection_only(char *envp[]);
 static void test_combined_redirection_and_pipeline(char *envp[]);
 static void test_cat_frankenstein(char *envp[]);
 
-// MAIN
+/* MAIN TEST DRIVER */
 int main(int argc, char *argv[], char *envp[])
 {
     printf("=== Standard RunJob Tests ===\n");
@@ -63,7 +64,7 @@ int main(int argc, char *argv[], char *envp[])
     return 0;
 }
 
-// FUNCTION DEFINITIONS
+/* FUNCTION DEFINITIONS */
 /* ---
 Function Name: print_job
 Purpose:

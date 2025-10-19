@@ -7,9 +7,10 @@
 #include <stdio.h>
 #include <string.h>
 
+/* STRING FORMAT CONSTANTS*/
 #define TEST_SEPERATOR "-------------------------------------------------\n"
 
-// FUNCTION DECLARATIONS
+/* FUNCTION DECLARATIONS */
 static void print_job(Job *job);
 static void test_normal_command();
 static void test_pipeline_command();
@@ -20,7 +21,7 @@ static void test_bytes_read_zero();
 static void test_bytes_read_overflow();
 static void test_get_job_from_stdin();
 
-// MAIN
+/* MAIN TEST DRIVER */
 int main(void)
 {
     test_normal_command();
@@ -38,8 +39,7 @@ int main(void)
     return 0;
 }
 
-// FUNCTION DEFINITIONS
-
+/* FUNCTION DEFINITIONS */
 /* ---
 Function Name: print_job
 Purpose:

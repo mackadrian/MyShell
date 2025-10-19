@@ -3,19 +3,19 @@
 
 #include "jobs.h"
 
-// Global Variable
+/* GLOBAL VARIABLES */
 extern int last_exit_status;
 extern Job jobs[MAX_JOBS];
 extern int num_jobs;
 
-// General Constants
+/* GENERAL CONSTANTS */
 #define INITIAL_INDEX           0
 #define ZERO_VALUE              0
 #define TRUE                    1
 #define FALSE                   0
 #define NULL_CHAR               '\0'
 
-// Parsing / Numeric Conversion
+/* PARSING / NUMERIC CONVERSION */
 #define DECIMAL_BASE            10
 #define HALF                    2
 #define NEGATIVE_SIGN           '-'
@@ -24,7 +24,7 @@ extern int num_jobs;
 #define NEGATIVE_SIGN_MUL       -1
 #define INT_BUFFER_LEN          16
 
-// Environment Handling
+/* ENVIRONMENT HANDLING */
 #define HOME_ENV_NAME           "HOME"
 #define ENV_ASSIGN_CHAR         '='
 #define ASSIGN_EQUAL            "="
@@ -35,14 +35,14 @@ extern int num_jobs;
 #define STRINGS_MATCH           0
 #define ENV_TERMINATOR_NULL     '\0'
 
-// Job Control
+/* JOB CONTROL */
 #define NO_JOBS                 0
 #define INVALID_PGID            0
 #define JOB_OFFSET_INDEX        1
 #define JOB_DISPLAY_WIDTH       8
 #define JOB_ID_OFFSET           1
 
-// Output Formatting
+/* OUTPUT FORMATTING */
 #define TERMINAL_TAB_CHAR       "\t"
 #define JOB_NEWLINE_CHAR        "\n"
 #define JOB_STRING_END          '\0'
@@ -55,12 +55,11 @@ extern int num_jobs;
 #define MSG_BG_RUNNING_PREFIX   "["
 #define MSG_BG_RUNNING_SUFFIX   "] Running \t"
 
-// Error Messages
+/* ERROR MESSAGES */
 #define CD_ERROR_MSG            "cd: failed\n"
 #define CD_ERROR_MSG_LEN        11
 
-
-// Function Declarations
+/* FUNCTION DECLARATIONS */
 void handle_cd(char **argv, char *envp[]);
 void handle_exit(char **argv);
 void handle_export(char **argv, char *envp[]);
