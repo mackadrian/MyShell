@@ -119,32 +119,32 @@ Output:
 --- */
 void myitoa(int n, char *buf)
 {
-    int i = 0;
-    int is_negative = 0;
+    int i = INITIAL_INDEX;
+    int is_negative = FALSE;
 
-    if (n == 0) {
-        buf[0] = '0';
-        buf[1] = '\0';
+    if (n == ZERO_VALUE) {
+        buf[INITIAL_INDEX] = ZERO_CHAR;
+        buf[INITIAL_INDEX + 1] = NULL_CHAR;
         return;
     }
 
-    if (n < 0) {
-        is_negative = 1;
+    if (n < ZERO_VALUE) {
+        is_negative = TRUE;
         n = -n;
     }
 
-    while (n > 0) {
-        buf[i++] = (n % 10) + '0';
-        n /= 10;
+    while (n > ZERO_VALUE) {
+        buf[i++] = (n % DECIMAL_BASE) + ZERO_CHAR;
+        n /= DECIMAL_BASE;
     }
 
     if (is_negative)
-        buf[i++] = '-';
+        buf[i++] = NEGATIVE_SIGN;
 
-    buf[i] = '\0';
+    buf[i] = NULL_CHAR;
 
     // Reverse string in place
-    for (int j = 0; j < i / 2; j++) {
+    for (int j = 0; j < i / HALF; j++) {
         char temp = buf[j];
         buf[j] = buf[i - j - 1];
         buf[i - j - 1] = temp;

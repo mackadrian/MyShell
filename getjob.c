@@ -205,9 +205,9 @@ void parse_stage(Command *cmd, char *stage_str, Job *job)
         for (int j = ZERO_VALUE; j < tok_len; j++) token[j] = stage_str[start + j];
         token[tok_len] = NULL_CHAR;
 
-        if (mystrcmp(token, "<") == ZERO_VALUE) {
+        if (mystrcmp(token, TOKEN_INPUT) == ZERO_VALUE) {
             parse_input_redirection(job, stage_str, &i);
-        } else if (mystrcmp(token, ">") == ZERO_VALUE) {
+        } else if (mystrcmp(token, TOKEN_OUTPUT) == ZERO_VALUE) {
             parse_output_redirection(job, stage_str, &i);
         } else {
             parse_argument(cmd, token);

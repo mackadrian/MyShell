@@ -6,7 +6,7 @@
 #include <unistd.h>   // write()
 #include <sys/wait.h> // waitpid()
 
-volatile sig_atomic_t fg_job_running = 0;
+volatile sig_atomic_t fg_job_running = NO_FLAGS;
 
 /* extern globals for background jobs */
 extern Job jobs[MAX_JOBS];
@@ -27,7 +27,7 @@ void handle_signal(int sig)
 {
     if (sig == SIGINT)
     {
-        write(STDOUT_FILENO, "\n", 1);
+      write(STDOUT_FILENO, NEWLINE_STR, mystrlen(NEWLINE_STR));
     }
 }
 
@@ -46,19 +46,19 @@ void sigchld_handler(int sig)
     int status;
     pid_t pid;
 
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    while ((pid = waitpid(-1, &status, WNOHANG)) > VALID_PID)
     {
-        for (int i = 0; i < num_jobs; i++)
+        for (int i = INITIAL_INDEX; i < num_jobs; i++)
         {
             if (jobs[i].pgid == pid)
             {
                 // mark as completed
-                jobs[i].background = 0;
+                jobs[i].background = ZERO_VALUE;
 
-                write(STDOUT_FILENO, "[Job Done] ", 11);
-                write(STDOUT_FILENO, jobs[i].pipeline[0].argv[0],
-                      mystrlen(jobs[i].pipeline[0].argv[0]));
-                write(STDOUT_FILENO, "\n", 1);
+                write(STDOUT_FILENO, MSG_JOB_DONE, mystrlen(MSG_JOB_DONE));
+                write(STDOUT_FILENO, jobs[i].pipeline[INITIAL_INDEX].argv[INITIAL_INDEX],
+                      mystrlen(jobs[i].pipeline[INITIAL_INDEX].argv[INITIAL_INDEX]));
+                write(STDOUT_FILENO, NEWLINE_STR, mystrlen(NEWLINE_STR));
                 break;
             }
         }
@@ -79,7 +79,7 @@ void initialize_signal_handler()
     struct sigaction sa_int;
     sa_int.sa_handler = handle_signal;
     sigemptyset(&sa_int.sa_mask);
-    sa_int.sa_flags = 0;
+    sa_int.sa_flags = NO_FLAGS;
     sigaction(SIGINT, &sa_int, NULL);
 
     struct sigaction sa_chld;
@@ -91,6 +91,6 @@ void initialize_signal_handler()
     struct sigaction sa_tstp;
     sa_tstp.sa_handler = SIG_IGN;
     sigemptyset(&sa_tstp.sa_mask);
-    sa_tstp.sa_flags = 0;
+    sa_tstp.sa_flags = NO_FLAGS;
     sigaction(SIGTSTP, &sa_tstp, NULL);
 }

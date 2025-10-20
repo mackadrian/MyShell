@@ -7,7 +7,10 @@
 #include <stdio.h>
 #include <string.h>
 
-// FUNCTION DECLARATIONS
+/* STRING FORMAT CONSTANTS*/
+#define TEST_SEPERATOR "-------------------------------------------------\n"
+
+/* FUNCTION DECLARATIONS */
 static void print_job(Job *job);
 static void test_normal_command();
 static void test_pipeline_command();
@@ -18,7 +21,7 @@ static void test_bytes_read_zero();
 static void test_bytes_read_overflow();
 static void test_get_job_from_stdin();
 
-// MAIN
+/* MAIN TEST DRIVER */
 int main(void)
 {
     test_normal_command();
@@ -36,8 +39,7 @@ int main(void)
     return 0;
 }
 
-// FUNCTION DEFINITIONS
-
+/* FUNCTION DEFINITIONS */
 /* ---
 Function Name: print_job
 Purpose:
@@ -61,7 +63,7 @@ static void print_job(Job *job)
             printf("    argv[%d]: %s\n", j, cmd->argv[j]);
         }
     }
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -157,7 +159,7 @@ static void test_bytes_read_negative()
     printf("Test: bytes_read < 0\n");
     int status = check_read_status(-1);
     printf("check_read_status returned %d\n", status);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -170,7 +172,7 @@ static void test_bytes_read_zero()
     printf("Test: bytes_read == 0\n");
     int status = check_read_status(0);
     printf("check_read_status returned %d\n", status);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -183,7 +185,7 @@ static void test_bytes_read_overflow()
     printf("Test: bytes_read > MAX_ARGS\n");
     int status = check_read_status(MAX_ARGS + 100);
     printf("check_read_status returned %d\n", status);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---

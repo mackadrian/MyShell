@@ -10,11 +10,14 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
+/* STRING FORMAT CONSTANTS */
+#define TEST_SEPERATOR "-------------------------------------------------\n"
+
 /* Dummy globals for unit testing */
 Job jobs[MAX_JOBS];
 int num_jobs = 0;
 
-// FUNCTION DECLARATIONS
+/* FUNCTION DECLARATIONS */
 static void print_job(Job *job);
 static void set_test_job(Job *job);
 static void build_cmdline(Job *job, char *cmdline, size_t size);
@@ -36,7 +39,7 @@ static void test_combined_redirection_and_pipeline(char *envp[]);
 static void test_cat_frankenstein(char *envp[]);
 static void test_less_frankenstein(char *envp[]);
 
-// MAIN
+/* MAIN TEST DRIVER */
 int main(int argc, char *argv[], char *envp[])
 {
     printf("=== Standard RunJob Tests ===\n");
@@ -66,7 +69,7 @@ int main(int argc, char *argv[], char *envp[])
     return 0;
 }
 
-// FUNCTION DEFINITIONS
+/* FUNCTION DEFINITIONS */
 /* ---
 Function Name: print_job
 Purpose:
@@ -93,7 +96,7 @@ static void print_job(Job *job)
             printf("    argv[%d]: %s\n", j, cmd->argv[j]);
         }
     }
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -176,7 +179,7 @@ static void test_normal_command(char *envp[])
     print_job(&job);
 
     run_job(&job, envp);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 
@@ -217,7 +220,7 @@ static void test_pipeline_command(char *envp[])
     print_job(&job);
 
     run_job(&job, envp);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -247,20 +250,25 @@ static void test_background_command(char *envp[])
     print_job(&job);
 
     run_job(&job, envp);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
 Function Name: test_redirection_command
 Purpose:
-    Tests combined input and output redirection through a simple pipeline.
+    Tests input and output redirection with a simple pipeline:
+        cat < input.txt | sort > output.txt
+    Ensures redirection and pipe setup function correctly in run_job().
 Input:
     envp - environment variable array passed to execve().
 Output:
-    Writes to output.txt after reading from input.txt, verifies file redirection.
+    Writes sorted content from input.txt to output.txt and displays result.
 --- */
 static void test_redirection_command(char *envp[])
 {
+    printf("=== Test: cat < input.txt | sort > output.txt ===\n");
+    prepare_input_file("input.txt");
+
     Job job;
     set_test_job(&job);
 
@@ -269,11 +277,11 @@ static void test_redirection_command(char *envp[])
     job.outfile_path = "output.txt";
 
     job.pipeline[0].argc = 1;
-    job.pipeline[0].argv[0] = "sort";
+    job.pipeline[0].argv[0] = "cat";
     job.pipeline[0].argv[1] = NULL;
 
     job.pipeline[1].argc = 1;
-    job.pipeline[1].argv[0] = "uniq";
+    job.pipeline[1].argv[0] = "sort";
     job.pipeline[1].argv[1] = NULL;
 
     char cmdline[256];
@@ -284,7 +292,7 @@ static void test_redirection_command(char *envp[])
     print_job(&job);
 
     run_job(&job, envp);
-    printf("-------------------------------------------------\n");
+    check_output_file("output.txt");
 }
 
 /* ---
@@ -313,7 +321,7 @@ static void test_invalid_command(char *envp[])
 
     run_job(&job, envp);
     printf("Expected error: %s", error_messages[ERR_CMD_NOT_FOUND]);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -343,7 +351,7 @@ static void test_missing_file_command(char *envp[])
 
     run_job(&job, envp);
     printf("Expected error: %s", error_messages[ERR_FILE_NOT_FOUND]);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -372,7 +380,7 @@ static void test_sigint_handling(char *envp[])
     print_job(&job);
     run_job(&job, envp);
 
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -414,7 +422,7 @@ static void check_output_file(const char *filename) {
         printf("%s", line);
     }
     fclose(f);
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---
@@ -441,7 +449,7 @@ static void test_cat_input_redirection(char *envp[]) {
 
     run_job(&job, envp);
     printf("Expected output: contents of input.txt\n");
-    printf("-------------------------------------------------\n");
+    printf(TEST_SEPERATOR);
 }
 
 /* ---

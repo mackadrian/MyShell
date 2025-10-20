@@ -1,11 +1,14 @@
 #ifndef ERRORS_H
 #define ERRORS_H
 
-#define STD_OUT 1
-#define STD_ERR 2
+/* STANDARD FILE DESCRIPTORS */
+#define STD_OUT                 1
+#define STD_ERR                 2
 
-#define MIN_ERROR_CODE 0
+/* NUMERIC CONSTANTS */
+#define MIN_ERROR_CODE          0
 
+/* ERROR CODES ENUMERATION */
 enum ErrorCode {
     ERR_CMD_NOT_FOUND = 1,   /* start numbering from 1 */
     ERR_ARG_EXCD,
@@ -17,7 +20,7 @@ enum ErrorCode {
     NUM_ERRORS
 };
 
-// ERROR MESSAGE TABLE
+/* ERROR MESSAGE TABLE */
 static const char *error_messages[NUM_ERRORS] = {
     [ERR_CMD_NOT_FOUND]  = ": command not found\n",
     [ERR_ARG_EXCD]       = "Error: maximum arguments exceeded\n",
@@ -28,7 +31,7 @@ static const char *error_messages[NUM_ERRORS] = {
     [ERR_INVALID_INPUT]  = "Error: invalid input\n"
 };
 
-// FUNCTION PROTOTYPES
+/* FUNCTION DECLARATIONS */
 void print_error(enum ErrorCode code);
 
 #endif
