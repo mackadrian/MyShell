@@ -67,7 +67,7 @@ mysh$
 + Signal handling (Ctrl+C, Ctrl+Z)
 
 ## Limitations
-+ Does not support advanced Bash features such as command substituion or shell scripting
++ Does not support advanced Bash features such as command substitution or shell scripting
 + Limited PATH resolution (does not handle every edge case)
 + Other signals are ignored or not fully supported
 
